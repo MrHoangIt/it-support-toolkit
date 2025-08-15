@@ -9,9 +9,10 @@ using System.Management;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.VisualBasic;
 using System.Windows.Forms;
 
-//version 008.2 backup driver sua ten thu muc nhung chua chuan
+//version 009.2 nang cap windows+change kms
 namespace IT_Support_Toolkit
 {
     public partial class Homepage : Form
@@ -1543,11 +1544,11 @@ namespace IT_Support_Toolkit
             string[] lines =
             {
             "Phần mềm: IT Support Toolkit",
-            "Phiên bản: 0.0.9 build ngày 14/08/2025",
-            "Ngày phát hành: 14/08/2025",
+            "Phiên bản: 0.0.10.0",
+            "Ngày phát hành: 15/08/2025",
             "Tác giả: Harry Hoang Le",
             "","",
-            "Phần mềm thử nghiệm, các nút ẩn mờ đi là tính năng dự kiến sẽ phát triển, các nút màu xám là tính năng chưa được test đầy đủ, các nút màu xanh là đã chạy được cơ bản."
+            "Phần mềm thử nghiệm, các nút ẩn mờ đi là tính năng dự kiến sẽ phát triển, các nút màu xám và xanh nhạt là tính năng chưa được test đầy đủ, các nút màu xanh là đã chạy được cơ bản."
              };
 
             string versionInfo = string.Join(Environment.NewLine, lines);
@@ -1556,6 +1557,641 @@ namespace IT_Support_Toolkit
                             "Thông tin phiên bản",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Information);
+        }
+
+        private void button14_Click_1(object sender, EventArgs e)
+        {
+            try
+            {
+                string edition = GetWindowsEdition();
+
+                if (edition.Contains("Pro"))
+                {
+                    MessageBox.Show("Máy đã chạy Windows Pro. Không cần nâng cấp.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Nếu chưa phải bản Pro
+                DialogResult result = MessageBox.Show(
+                    $"Phiên bản hiện tại: {edition}\n\nBạn muốn nâng cấp lên Windows Pro bằng key mặc định không?",
+                    "Nâng cấp Windows",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button1);
+
+                // Yes = dùng key mặc định
+                if (result == DialogResult.Yes)
+                {
+                    string defaultKey = "VK7JG-NPHTM-C97JM-9MPGT-3V66T"; // Key mặc định Windows Pro
+                    UpgradeWindows(defaultKey);
+                }
+                // No = nhập key tùy chỉnh
+                else if (result == DialogResult.No)
+                {
+                    string userKey = Microsoft.VisualBasic.Interaction.InputBox("Nhập key Windows Pro của bạn:", "Nhập key", "");
+
+                    if (string.IsNullOrWhiteSpace(userKey) || userKey.Length < 25)
+                    {
+                        MessageBox.Show("Key không hợp lệ. Vui lòng thử lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    UpgradeWindows(userKey);
+                }
+                // Cancel = không làm gì
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi: " + ex.Message);
+            }
+        }
+
+        private string GetWindowsEdition()
+        {
+            using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Caption FROM Win32_OperatingSystem"))
+            {
+                foreach (ManagementObject os in searcher.Get())
+                {
+                    return os["Caption"].ToString();
+                }
+            }
+            return "Không xác định";
+        }
+
+        private void UpgradeWindows(string productKey)
+        {
+            try
+            {
+                string command = $"/C changepk.exe /productkey {productKey}";
+                ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", command)
+                {
+                    Verb = "runas",
+                    CreateNoWindow = true,
+                    UseShellExecute = true
+                };
+
+                Process.Start(psi);
+                MessageBox.Show("Đang tiến hành nâng cấp. Vui lòng chờ và khởi động lại máy nếu cần.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi nâng cấp: " + ex.Message);
+            }
+        }
+
+        private void button15_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string edition = GetWindowsEdition();
+                string licenseChannel = GetLicenseChannel();
+
+                string message = $"Phiên bản hiện tại: {edition}\nLoại kích hoạt: {licenseChannel}";
+
+                if (licenseChannel.Contains("Volume") && licenseChannel.Contains("KMS"))
+                {
+                    MessageBox.Show(message + "\n\nWindows đã được kích hoạt qua KMS. Không cần chuyển.", "Thông tin", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                DialogResult result = MessageBox.Show(
+                    message + "\n\nBạn có muốn chuyển sang Volume KMS không?",
+                    "Chuyển sang KMS",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    string kmsKey = "W269N-WFGWX-YVC9B-4F6C9-T83GX"; // KMS Client Setup Key cho Windows Pro
+                    RunCmd($"/c slmgr /ipk {kmsKey}");
+                    RunCmd("/c slmgr /ato");
+
+                    MessageBox.Show("Đã chuyển sang Volume KMS và kích hoạt lại Windows.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi: " + ex.Message);
+            }
+        }
+
+        private string GetLicenseChannel()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo("powershell", "-Command \"(Get-WmiObject -query 'select * from SoftwareLicensingProduct where PartialProductKey is not null').Description\"")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                string result = "";
+                using (Process proc = Process.Start(psi))
+                {
+                    result = proc.StandardOutput.ReadToEnd();
+                }
+
+                result = result.ToLower();
+
+                if (result.Contains("kms"))
+                    return "Volume - KMS";
+                else if (result.Contains("mak"))
+                    return "Volume - MAK";
+                else if (result.Contains("retail"))
+                    return "Retail";
+                else
+                    return "Không xác định";
+            }
+            catch
+            {
+                return "Không xác định";
+            }
+        }
+
+        private void RunCmd(string arguments)
+        {
+            ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", arguments)
+            {
+                Verb = "runas",
+                CreateNoWindow = true,
+                UseShellExecute = true
+            };
+            Process.Start(psi);
+        }
+
+        // Biến lưu thông tin KMS server hiện tại (sẽ được lấy từ hệ thống)
+        private string currentKmsServer = "";
+        private string currentKmsPort = "";
+
+        // Nút hiển thị thông tin KMS server hiện tại
+        private void button17_Click_1(object sender, EventArgs e)
+        {
+            try
+            {
+                // Lấy thông tin KMS server từ hệ thống
+                GetCurrentKmsServer();
+
+                string currentInfo;
+                if (string.IsNullOrEmpty(currentKmsServer))
+                {
+                    currentInfo = "Chưa cấu hình KMS Server hoặc không thể truy xuất thông tin.";
+                }
+                else
+                {
+                    currentInfo = $"KMS Server hiện tại:\n" +
+                                 $"Server: {currentKmsServer}\n" +
+                                 $"Port: {(string.IsNullOrEmpty(currentKmsPort) ? "1688 (mặc định)" : currentKmsPort)}";
+                }
+
+                DialogResult result = MessageBox.Show(
+                    currentInfo + "\n\nBạn có muốn thay đổi KMS Server không?",
+                    "Thông tin KMS Server",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information
+                );
+
+                // Nếu người dùng muốn thay đổi
+                if (result == DialogResult.Yes)
+                {
+                    ShowChangeKmsServerDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi truy xuất thông tin KMS: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Form để người dùng nhập KMS server mới
+        private void ShowChangeKmsServerDialog()
+        {
+            Form changeForm = new Form()
+            {
+                Width = 390,
+                Height = 190,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = "Thay đổi KMS Server",
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            Label serverLabel = new Label() { Left = 20, Top = 20, Width = 40, Text = "Server:" };
+            TextBox serverTextBox = new TextBox() { Left = 80, Top = 17, Width = 250, Text = currentKmsServer };
+
+            Label portLabel = new Label() { Left = 20, Top = 50, Width = 40, Text = "Port:" };
+            TextBox portTextBox = new TextBox() { Left = 80, Top = 47, Width = 100, Text = "1688" }; // Port mặc định
+
+            Button confirmButton = new Button() { Text = "Xác nhận", Left = 100, Width = 80, Top = 90, DialogResult = DialogResult.OK };
+            Button cancelButton = new Button() { Text = "Hủy", Left = 220, Width = 80, Top = 90, DialogResult = DialogResult.Cancel };
+
+            // Sự kiện xác nhận
+            confirmButton.Click += (sender, e) => {
+                string newServer = serverTextBox.Text.Trim();
+                string newPort = portTextBox.Text.Trim();
+
+                if (ValidateKmsInput(newServer, newPort))
+                {
+                    currentKmsServer = newServer;
+                    currentKmsPort = newPort;
+
+                    MessageBox.Show($"Đã thay đổi KMS Server thành công!\n" +
+                                  $"Server: {currentKmsServer}\n" +
+                                  $"Port: {currentKmsPort}",
+                                  "Thành công",
+                                  MessageBoxButtons.OK,
+                                  MessageBoxIcon.Information);
+
+                    // Gọi hàm áp dụng thay đổi (nếu cần)
+                    ApplyKmsServerChange();
+
+                    changeForm.Close();
+                }
+            };
+
+            changeForm.Controls.Add(serverLabel);
+            changeForm.Controls.Add(serverTextBox);
+            changeForm.Controls.Add(portLabel);
+            changeForm.Controls.Add(portTextBox);
+            changeForm.Controls.Add(confirmButton);
+            changeForm.Controls.Add(cancelButton);
+
+            changeForm.AcceptButton = confirmButton;
+            changeForm.CancelButton = cancelButton;
+
+            changeForm.ShowDialog();
+        }
+
+        // Kiểm tra tính hợp lệ của input
+        private bool ValidateKmsInput(string server, string port)
+        {
+            // Kiểm tra server không được rỗng
+            if (string.IsNullOrWhiteSpace(server))
+            {
+                MessageBox.Show("Vui lòng nhập địa chỉ server!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            // Kiểm tra port
+            if (string.IsNullOrWhiteSpace(port))
+            {
+                MessageBox.Show("Vui lòng nhập port!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            // Kiểm tra port là số và trong khoảng hợp lệ
+            if (!int.TryParse(port, out int portNumber) || portNumber < 1 || portNumber > 65535)
+            {
+                MessageBox.Show("Port phải là số từ 1 đến 65535!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            return true;
+        }
+
+        // Parse thông tin KMS từ output của slmgr (cải tiến)
+        private bool ParseKmsInfoFromOutput(string output)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(output))
+                    return false;
+
+                // Các pattern có thể có trong output
+                string[] patterns = {
+                "KMS machine name",
+                "KMS server name",
+                "Key Management Service machine name",
+                "Tên máy KMS"
+            };
+
+                string[] lines = output.Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (string line in lines)
+                {
+                    foreach (string pattern in patterns)
+                    {
+                        if (line.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            // Tìm phần sau dấu ":"
+                            int colonIndex = line.IndexOf(':');
+                            if (colonIndex > 0 && colonIndex < line.Length - 1)
+                            {
+                                string kmsInfo = line.Substring(colonIndex + 1).Trim();
+
+                                if (!string.IsNullOrEmpty(kmsInfo) && kmsInfo != "<not set>" && kmsInfo.ToLower() != "not set")
+                                {
+                                    // Kiểm tra nếu có port trong cùng string
+                                    if (kmsInfo.Contains(':') && !kmsInfo.StartsWith("http"))
+                                    {
+                                        string[] parts = kmsInfo.Split(':');
+                                        currentKmsServer = parts[0].Trim();
+                                        currentKmsPort = parts[1].Trim();
+                                    }
+                                    else
+                                    {
+                                        currentKmsServer = kmsInfo;
+                                        currentKmsPort = "1688"; // Port mặc định
+                                    }
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi parse KMS info: {ex.Message}");
+                return false;
+            }
+        }
+        private void ApplyKmsServerChange()
+        {
+            try
+            {
+                // Sử dụng lệnh slmgr để cài đặt KMS server mới
+                string kmsAddress = string.IsNullOrEmpty(currentKmsPort) || currentKmsPort == "1688"
+                                  ? currentKmsServer
+                                  : $"{currentKmsServer}:{currentKmsPort}";
+
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "slmgr.vbs",
+                    Arguments = $"/skms {kmsAddress}",
+                    UseShellExecute = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    Verb = "runas" // Chạy với quyền admin
+                };
+
+                using (Process process = Process.Start(psi))
+                {
+                    process.WaitForExit();
+
+                    if (process.ExitCode == 0)
+                    {
+                        Console.WriteLine($"Áp dụng KMS Server thành công: {currentKmsServer}:{currentKmsPort}");
+                    }
+                    else
+                    {
+                        throw new Exception($"Lệnh slmgr trả về mã lỗi: {process.ExitCode}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi áp dụng thay đổi KMS server:\n{ex.Message}\n\nVui lòng chạy ứng dụng với quyền Administrator.",
+                              "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Truy xuất thông tin KMS server từ hệ thống Windows
+        private void GetCurrentKmsServer()
+        {
+            bool success = false;
+            string debugInfo = "";
+
+            // Phương pháp 1: Sử dụng cscript để chạy slmgr.vbs
+            try
+            {
+                debugInfo += "Thử phương pháp 1: cscript slmgr.vbs...\n";
+                if (GetKmsUsingCScript())
+                {
+                    success = true;
+                    debugInfo += "Thành công với cscript!\n";
+                }
+            }
+            catch (Exception ex)
+            {
+                debugInfo += $"Phương pháp 1 lỗi: {ex.Message}\n";
+            }
+
+            // Phương pháp 2: Đọc từ Registry nếu phương pháp 1 thất bại
+            if (!success)
+            {
+                try
+                {
+                    debugInfo += "Thử phương pháp 2: Registry...\n";
+                    if (GetKmsFromRegistry())
+                    {
+                        success = true;
+                        debugInfo += "Thành công với Registry!\n";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    debugInfo += $"Phương pháp 2 lỗi: {ex.Message}\n";
+                }
+            }
+
+            // Phương pháp 3: Sử dụng WMI
+            if (!success)
+            {
+                try
+                {
+                    debugInfo += "Thử phương pháp 3: WMI...\n";
+                    if (GetKmsUsingWMI())
+                    {
+                        success = true;
+                        debugInfo += "Thành công với WMI!\n";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    debugInfo += $"Phương pháp 3 lỗi: {ex.Message}\n";
+                }
+            }
+
+            // Phương pháp 4: Sử dụng PowerShell
+            if (!success)
+            {
+                try
+                {
+                    debugInfo += "Thử phương pháp 4: PowerShell...\n";
+                    if (GetKmsUsingPowerShell())
+                    {
+                        success = true;
+                        debugInfo += "Thành công với PowerShell!\n";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    debugInfo += $"Phương pháp 4 lỗi: {ex.Message}\n";
+                }
+            }
+
+            if (!success)
+            {
+                currentKmsServer = "";
+                currentKmsPort = "";
+                // Hiển thị thông tin debug để biết nguyên nhân
+                MessageBox.Show($"Debug Info:\n{debugInfo}", "Thông tin Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        // Phương pháp 1: Sử dụng cscript để chạy slmgr.vbs
+        private bool GetKmsUsingCScript()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "cscript.exe",
+                    Arguments = "//nologo C:\\Windows\\System32\\slmgr.vbs /dlv",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                using (Process process = Process.Start(psi))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        Console.WriteLine($"CScript Error: {error}");
+                    }
+
+                    return ParseKmsInfoFromOutput(output);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GetKmsUsingCScript Error: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Phương pháp 2: Đọc từ Registry (cải tiến)
+        private bool GetKmsFromRegistry()
+        {
+            try
+            {
+                // Thử đọc từ các vị trí Registry khác nhau
+                string[] registryPaths = {
+                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform",
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\SoftwareProtectionPlatform",
+                @"SYSTEM\CurrentControlSet\Services\sppsvc\Parameters"
+            };
+
+                foreach (string path in registryPaths)
+                {
+                    using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(path))
+                    {
+                        if (key != null)
+                        {
+                            object kmsServer = key.GetValue("KeyManagementServiceName");
+                            object kmsPort = key.GetValue("KeyManagementServicePort");
+
+                            if (kmsServer != null && !string.IsNullOrEmpty(kmsServer.ToString()))
+                            {
+                                currentKmsServer = kmsServer.ToString();
+                                currentKmsPort = kmsPort?.ToString() ?? "1688";
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GetKmsFromRegistry Error: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Phương pháp 3: Sử dụng WMI
+        private bool GetKmsUsingWMI()
+        {
+            try
+            {
+                using (var searcher = new System.Management.ManagementObjectSearcher("SELECT * FROM SoftwareLicensingService"))
+                {
+                    foreach (System.Management.ManagementObject obj in searcher.Get())
+                    {
+                        object kmsServer = obj["KeyManagementServiceMachine"];
+                        object kmsPort = obj["KeyManagementServicePort"];
+
+                        if (kmsServer != null && !string.IsNullOrEmpty(kmsServer.ToString()))
+                        {
+                            currentKmsServer = kmsServer.ToString();
+                            currentKmsPort = kmsPort?.ToString() ?? "1688";
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GetKmsUsingWMI Error: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Phương pháp 4: Sử dụng PowerShell
+        private bool GetKmsUsingPowerShell()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = "-Command \"Get-WmiObject -Query 'SELECT * FROM SoftwareLicensingService' | Select-Object KeyManagementServiceMachine, KeyManagementServicePort\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                using (Process process = Process.Start(psi))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    return ParsePowerShellOutput(output);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GetKmsUsingPowerShell Error: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Parse thông tin từ PowerShell output
+        private bool ParsePowerShellOutput(string output)
+        {
+            try
+            {
+                string[] lines = output.Split('\n');
+                foreach (string line in lines)
+                {
+                    if (line.Contains("KeyManagementServiceMachine") && line.Contains(":"))
+                    {
+                        string server = line.Split(':')[1].Trim();
+                        if (!string.IsNullOrEmpty(server) && server != "null")
+                        {
+                            currentKmsServer = server;
+                            currentKmsPort = "1688"; // Sẽ được cập nhật nếu tìm thấy port
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
