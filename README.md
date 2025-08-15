@@ -5,8 +5,11 @@ This tool is created to assist IT Support tasks
 ## Features
 This is some demo functions now it can use:
 - Check PC information
-- Backup and restore driver
-- Backup and restore Wifi
+- Convert Windows Home to Pro
+- Convert Windows Retail to Volume KMS
+- Change KMS server
+- Backup and restore drivers
+- Backup and restore WiFi
 - User Temporary File Cleanup
 
 ## Release
