@@ -1662,7 +1662,7 @@ namespace IT_Support_Toolkit
 
                 if (result == DialogResult.Yes)
                 {
-                    string kmsKey = "W269N-WFGWX-YVC9B-4F6C9-T83GX"; // KMS Client Setup Key cho Windows Pro
+                    string kmsKey = "W269N-WFGWX-YVC9B-4J6C9-T83GX"; // KMS Client Setup Key cho Windows Pro
                     RunCmd($"/c slmgr /ipk {kmsKey}");
                     RunCmd("/c slmgr /ato");
 
