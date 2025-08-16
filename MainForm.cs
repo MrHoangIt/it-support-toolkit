@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32; // <-- đọc DisplayVersion/Build từ Registry
+﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
 using System.Windows.Forms;
 
-//version 009.2 nang cap windows+change kms
+//version 0.0.10.2 sua loi chuyen windows retail sang volume
 namespace IT_Support_Toolkit
 {
     public partial class Homepage : Form
@@ -1544,11 +1544,11 @@ namespace IT_Support_Toolkit
             string[] lines =
             {
             "Phần mềm: IT Support Toolkit",
-            "Phiên bản: 0.0.10.0",
-            "Ngày phát hành: 15/08/2025",
+            "Phiên bản: 0.0.10.2",
+            "Ngày phát hành: 16/08/2025",
             "Tác giả: Harry Hoang Le",
             "","",
-            "Phần mềm thử nghiệm, các nút ẩn mờ đi là tính năng dự kiến sẽ phát triển, các nút màu xám và xanh nhạt là tính năng chưa được test đầy đủ, các nút màu xanh là đã chạy được cơ bản."
+            "Phần mềm thử nghiệm, các nút ẩn mờ đi là tính năng dự kiến sẽ phát triển, các nút màu xám và xanh nhạt là tính năng chưa được test đầy đủ, các nút màu xanh đậm là đã chạy được cơ bản."
              };
 
             string versionInfo = string.Join(Environment.NewLine, lines);
@@ -1664,9 +1664,8 @@ namespace IT_Support_Toolkit
                 {
                     string kmsKey = "W269N-WFGWX-YVC9B-4J6C9-T83GX"; // KMS Client Setup Key cho Windows Pro
                     RunCmd($"/c slmgr /ipk {kmsKey}");
-                    RunCmd("/c slmgr /ato");
 
-                    MessageBox.Show("Đã chuyển sang Volume KMS và kích hoạt lại Windows.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Đã chuyển Windows sang Volume KMS.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
