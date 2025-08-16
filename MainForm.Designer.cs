@@ -307,7 +307,7 @@
             this.Controls.Add(this.button3);
             this.Controls.Add(this.btnCheckInfo);
             this.Name = "Homepage";
-            this.Text = "IT Support Toolkit v0.0.10.0 Release date 2025-08-15";
+            this.Text = "IT Support Toolkit v0.0.10.1 Release date 2025-08-16";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
 
