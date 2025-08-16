@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
 using System.Windows.Forms;
 
-//version 0.0.10.2 sua loi chuyen windows retail sang volume
+//version 0.0.10.3 sua loi change kms server
 namespace IT_Support_Toolkit
 {
     public partial class Homepage : Form
@@ -1544,9 +1544,13 @@ namespace IT_Support_Toolkit
             string[] lines =
             {
             "Phần mềm: IT Support Toolkit",
-            "Phiên bản: 0.0.10.2",
+            "Phiên bản: 0.0.10.3",
             "Ngày phát hành: 16/08/2025",
             "Tác giả: Harry Hoang Le",
+            "",
+            "Phần mềm public mã nguồn tại: https://github.com/mrhoangit/it-support-toolkit",
+            "",
+            "Link tải bản cập nhật tại: https://drive.google.com/drive/folders/1UOwwZiWMacI-JX4DdAgEWg9L3jadGiPr?usp=sharing",
             "","",
             "Phần mềm thử nghiệm, các nút ẩn mờ đi là tính năng dự kiến sẽ phát triển, các nút màu xám và xanh nhạt là tính năng chưa được test đầy đủ, các nút màu xanh đậm là đã chạy được cơ bản."
              };
@@ -1554,7 +1558,7 @@ namespace IT_Support_Toolkit
             string versionInfo = string.Join(Environment.NewLine, lines);
 
             MessageBox.Show(versionInfo,
-                            "Thông tin phiên bản",
+                            "Thông tin phần mềm",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Information);
         }
@@ -1728,6 +1732,24 @@ namespace IT_Support_Toolkit
         {
             try
             {
+                // ✅ KIỂM TRA QUYỀN ADMIN TRƯỚC
+                if (!CheckAdminRights())
+                {
+                    DialogResult adminResult = MessageBox.Show(
+                        "Chức năng này cần quyền Administrator để hoạt động chính xác.\n\n" +
+                        "Bạn có muốn khởi động lại ứng dụng với quyền Administrator không?",
+                        "Cần quyền Admin",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning
+                    );
+
+                    if (adminResult == DialogResult.Yes)
+                    {
+                        RelaunchAsAdmin();
+                        return;
+                    }
+                }
+
                 // Lấy thông tin KMS server từ hệ thống
                 GetCurrentKmsServer();
 
@@ -1744,7 +1766,7 @@ namespace IT_Support_Toolkit
                 }
 
                 DialogResult result = MessageBox.Show(
-                    currentInfo + "\n\nBạn có muốn thay đổi KMS Server không?",
+                    currentInfo + "\n\nBạn có muốn thiết lập/thay đổi KMS Server không?",
                     "Thông tin KMS Server",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Information
@@ -1785,27 +1807,37 @@ namespace IT_Support_Toolkit
             Button confirmButton = new Button() { Text = "Xác nhận", Left = 100, Width = 80, Top = 90, DialogResult = DialogResult.OK };
             Button cancelButton = new Button() { Text = "Hủy", Left = 220, Width = 80, Top = 90, DialogResult = DialogResult.Cancel };
 
-            // Sự kiện xác nhận
+            // Sự kiện xác nhận - FIXED
             confirmButton.Click += (sender, e) => {
                 string newServer = serverTextBox.Text.Trim();
                 string newPort = portTextBox.Text.Trim();
 
                 if (ValidateKmsInput(newServer, newPort))
                 {
-                    currentKmsServer = newServer;
-                    currentKmsPort = newPort;
+                    // ✅ ÁP DỤNG THAY ĐỔI TRƯỚC KHI THÔNG BÁO
+                    bool success = ApplyKmsServerChange(newServer, newPort);
 
-                    MessageBox.Show($"Đã thay đổi KMS Server thành công!\n" +
-                                  $"Server: {currentKmsServer}\n" +
-                                  $"Port: {currentKmsPort}",
-                                  "Thành công",
-                                  MessageBoxButtons.OK,
-                                  MessageBoxIcon.Information);
+                    if (success)
+                    {
+                        // Chỉ cập nhật biến và thông báo khi thành công
+                        currentKmsServer = newServer;
+                        currentKmsPort = newPort;
 
-                    // Gọi hàm áp dụng thay đổi (nếu cần)
-                    ApplyKmsServerChange();
-
-                    changeForm.Close();
+                        MessageBox.Show($"Đã thay đổi KMS Server thành công!\n" +
+                                      $"Server: {currentKmsServer}\n" +
+                                      $"Port: {currentKmsPort}",
+                                      "Thành công",
+                                      MessageBoxButtons.OK,
+                                      MessageBoxIcon.Information);
+                        changeForm.Close();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Không thể áp dụng thay đổi KMS Server. Vui lòng kiểm tra quyền Administrator.",
+                                      "Lỗi",
+                                      MessageBoxButtons.OK,
+                                      MessageBoxIcon.Error);
+                    }
                 }
             };
 
@@ -1907,42 +1939,77 @@ namespace IT_Support_Toolkit
                 return false;
             }
         }
-        private void ApplyKmsServerChange()
+
+        // Áp dụng thay đổi KMS Server - FIXED
+        private bool ApplyKmsServerChange(string server, string port)
         {
             try
             {
-                // Sử dụng lệnh slmgr để cài đặt KMS server mới
-                string kmsAddress = string.IsNullOrEmpty(currentKmsPort) || currentKmsPort == "1688"
-                                  ? currentKmsServer
-                                  : $"{currentKmsServer}:{currentKmsPort}";
+                // ✅ SỬ DỤNG CSCRIPT.EXE THAY VÌ GỌI TRỰC TIẾP SLMGR.VBS
+                string kmsAddress = string.IsNullOrEmpty(port) || port == "1688"
+                                  ? server
+                                  : $"{server}:{port}";
 
                 ProcessStartInfo psi = new ProcessStartInfo
                 {
-                    FileName = "slmgr.vbs",
-                    Arguments = $"/skms {kmsAddress}",
-                    UseShellExecute = true,
-                    WindowStyle = ProcessWindowStyle.Hidden,
+                    FileName = "cscript.exe", // ✅ FIXED: Dùng cscript.exe
+                    Arguments = $"//nologo C:\\Windows\\System32\\slmgr.vbs /skms {kmsAddress}",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
                     Verb = "runas" // Chạy với quyền admin
                 };
 
                 using (Process process = Process.Start(psi))
                 {
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
                     process.WaitForExit();
 
-                    if (process.ExitCode == 0)
+                    // ✅ KIỂM TRA KẾT QUẢ THỰC SỰ
+                    if (process.ExitCode == 0 && string.IsNullOrEmpty(error))
                     {
-                        Console.WriteLine($"Áp dụng KMS Server thành công: {currentKmsServer}:{currentKmsPort}");
+                        // Kiểm tra thêm nội dung output để chắc chắn
+                        if (!output.ToLower().Contains("error") && !output.ToLower().Contains("failed"))
+                        {
+                            Console.WriteLine($"✅ Áp dụng KMS Server thành công: {server}:{port}");
+                            Console.WriteLine($"Output: {output}");
+                            return true;
+                        }
                     }
-                    else
-                    {
-                        throw new Exception($"Lệnh slmgr trả về mã lỗi: {process.ExitCode}");
-                    }
+
+                    // Log lỗi để debug
+                    Console.WriteLine($"❌ Lỗi áp dụng KMS Server:");
+                    Console.WriteLine($"Exit Code: {process.ExitCode}");
+                    Console.WriteLine($"Output: {output}");
+                    Console.WriteLine($"Error: {error}");
+                    return false;
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi khi áp dụng thay đổi KMS server:\n{ex.Message}\n\nVui lòng chạy ứng dụng với quyền Administrator.",
+                Console.WriteLine($"❌ Exception khi áp dụng KMS server: {ex.Message}");
+                MessageBox.Show($"Lỗi khi áp dụng thay đổi KMS server:\n{ex.Message}",
                               "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+        }
+
+        // Kiểm tra quyền Administrator trước khi thực hiện
+        private bool CheckAdminRights()
+        {
+            try
+            {
+                using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+                {
+                    WindowsPrincipal principal = new WindowsPrincipal(identity);
+                    return principal.IsInRole(WindowsBuiltInRole.Administrator);
+                }
+            }
+            catch
+            {
+                return false;
             }
         }
 
