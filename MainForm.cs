@@ -279,13 +279,13 @@ namespace IT_Support_Toolkit
         }
 
         // MessageBox tùy chỉnh với nút Copy và Close
-        private void ShowCustomMessageBox(string info)
+        private void ShowCustomMessageBox(string info, string title = "Thông tin máy tính")
         {
             // Tạo form nhỏ gọn như MessageBox
             Form msgForm = new Form()
             {
-                Text = "Thông tin máy tính",
-                Size = new System.Drawing.Size(500, 400),
+                Text = title,
+                Size = new System.Drawing.Size(550, 450),
                 StartPosition = FormStartPosition.CenterParent,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
@@ -302,7 +302,7 @@ namespace IT_Support_Toolkit
                 Text = info,
                 Font = new System.Drawing.Font("Segoe UI", 9),
                 Location = new System.Drawing.Point(10, 10),
-                Size = new System.Drawing.Size(msgForm.Width - 40, msgForm.Height - 80)
+                Size = new System.Drawing.Size(msgForm.Width - 40, msgForm.Height - 100)
             };
 
             // Nút Copy
@@ -310,7 +310,7 @@ namespace IT_Support_Toolkit
             {
                 Text = "Copy",
                 Size = new System.Drawing.Size(80, 30),
-                Location = new System.Drawing.Point(msgForm.Width - 180, msgForm.Height - 60),
+                Location = new System.Drawing.Point(msgForm.Width - 210, msgForm.Height - 77),
                 UseVisualStyleBackColor = true
             };
 
@@ -319,7 +319,7 @@ namespace IT_Support_Toolkit
             {
                 Text = "Đóng",
                 Size = new System.Drawing.Size(80, 30),
-                Location = new System.Drawing.Point(msgForm.Width - 90, msgForm.Height - 60),
+                Location = new System.Drawing.Point(msgForm.Width - 120, msgForm.Height - 77),
                 UseVisualStyleBackColor = true,
                 DialogResult = DialogResult.OK
             };
@@ -348,6 +348,8 @@ namespace IT_Support_Toolkit
             msgForm.Controls.Add(textBox);
             msgForm.Controls.Add(copyButton);
             msgForm.Controls.Add(closeButton);
+            textBox.SelectionLength = 0;
+            textBox.SelectionStart = textBox.Text.Length;
 
             // Hiển thị form
             msgForm.ShowDialog();
@@ -604,11 +606,6 @@ namespace IT_Support_Toolkit
                 MessageBox.Show("Bạn đã từ chối quyền Administrator.");
             }
             Application.Exit();
-        }
-
-        private void button3_Click(object sender, EventArgs e)
-        {
-
         }
 
         //Wifi import button
@@ -3338,6 +3335,36 @@ namespace IT_Support_Toolkit
                 case "5": return "Notification (Thông báo)";
                 case "6": return "Extended Grace (Gia hạn thêm)";
                 default: return $"Không xác định ({status})";
+            }
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo("ipconfig", "/all")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.UTF8
+                };
+
+                string output;
+                using (var process = Process.Start(psi))
+                {
+                    output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+                }
+
+                // Chèn dòng tiêu đề vào đầu nội dung (chèn chưa thành công)
+                string info = "THÔNG TIN MẠNG" + Environment.NewLine + new string('=', 40) + Environment.NewLine + output;
+
+                ShowCustomMessageBox(output, "Thông tin mạng");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi lấy thông tin mạng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

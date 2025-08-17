@@ -68,13 +68,15 @@
             // 
             // button3
             // 
-            this.button3.Enabled = false;
+            this.button3.BackColor = System.Drawing.SystemColors.HotTrack;
+            this.button3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.button3.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
             this.button3.Location = new System.Drawing.Point(491, 55);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(158, 27);
             this.button3.TabIndex = 2;
             this.button3.Text = "Thông tin mạng";
-            this.button3.UseVisualStyleBackColor = true;
+            this.button3.UseVisualStyleBackColor = false;
             this.button3.Click += new System.EventHandler(this.button3_Click);
             // 
             // button5
