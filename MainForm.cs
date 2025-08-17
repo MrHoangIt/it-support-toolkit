@@ -1735,6 +1735,7 @@ namespace IT_Support_Toolkit
         {
             try
             {
+                /*
                 // ✅ KIỂM TRA QUYỀN ADMIN TRƯỚC
                 if (!CheckAdminRights())
                 {
@@ -1751,7 +1752,7 @@ namespace IT_Support_Toolkit
                         RelaunchAsAdmin();
                         return;
                     }
-                }
+                } */
 
                 // Lấy thông tin KMS server từ hệ thống
                 GetCurrentKmsServer();
@@ -1769,7 +1770,7 @@ namespace IT_Support_Toolkit
                 }
 
                 DialogResult result = MessageBox.Show(
-                    currentInfo + "\n\nBạn có muốn thiết lập/thay đổi KMS Server không?",
+                    currentInfo + "\n\nBạn có muốn thiết lập/thay đổi KMS Server và kích hoạt bản quyền không?",
                     "Thông tin KMS Server",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Information
@@ -1795,7 +1796,7 @@ namespace IT_Support_Toolkit
                 Width = 390,
                 Height = 190,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
-                Text = "Thay đổi KMS Server",
+                Text = "Thay đổi KMS Server và kích hoạt bản quyền",
                 StartPosition = FormStartPosition.CenterParent,
                 MaximizeBox = false,
                 MinimizeBox = false
@@ -1805,7 +1806,7 @@ namespace IT_Support_Toolkit
             TextBox serverTextBox = new TextBox() { Left = 80, Top = 17, Width = 250, Text = currentKmsServer };
 
             Label portLabel = new Label() { Left = 20, Top = 50, Width = 40, Text = "Port:" };
-            TextBox portTextBox = new TextBox() { Left = 80, Top = 47, Width = 100, Text = "1688" }; // Port mặc định
+            TextBox portTextBox = new TextBox() { Left = 80, Top = 47, Width = 100, Text = string.IsNullOrEmpty(currentKmsPort) ? "1688" : currentKmsPort }; // Port mặc định
 
             Button confirmButton = new Button() { Text = "Xác nhận", Left = 100, Width = 80, Top = 90, DialogResult = DialogResult.OK };
             Button cancelButton = new Button() { Text = "Hủy", Left = 220, Width = 80, Top = 90, DialogResult = DialogResult.Cancel };
@@ -1826,7 +1827,7 @@ namespace IT_Support_Toolkit
                         currentKmsServer = newServer;
                         currentKmsPort = newPort;
 
-                        MessageBox.Show($"Đã thay đổi KMS Server thành công!\n" +
+                        MessageBox.Show($"Đã thay đổi KMS Server và kích hoạt thành công!\n" +
                                       $"Server: {currentKmsServer}\n" +
                                       $"Port: {currentKmsPort}",
                                       "Thành công",
@@ -1957,15 +1958,23 @@ namespace IT_Support_Toolkit
                 {
                     FileName = "cscript.exe", // ✅ FIXED: Dùng cscript.exe
                     Arguments = $"//nologo C:\\Windows\\System32\\slmgr.vbs /skms {kmsAddress}",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
+                    UseShellExecute = true,
+                    //•	Khi UseShellExecute = true, bạn không thể dùng RedirectStandardOutput hoặc RedirectStandardError.
+                    //•	Nếu bạn cần lấy output, hãy ghi ra file tạm hoặc chỉ kiểm tra exit code.
+                    //RedirectStandardOutput = true,
+                    //RedirectStandardError = true,
+                    Verb = "runas", // Chạy với quyền admin
                     CreateNoWindow = true,
-                    Verb = "runas" // Chạy với quyền admin
+                    WindowStyle = ProcessWindowStyle.Hidden
                 };
 
                 using (Process process = Process.Start(psi))
                 {
+                    process.WaitForExit();
+                    // Chỉ kiểm tra exit code, không lấy output
+                    return process.ExitCode == 0;
+
+                    /*
                     string output = process.StandardOutput.ReadToEnd();
                     string error = process.StandardError.ReadToEnd();
                     process.WaitForExit();
@@ -1988,6 +1997,7 @@ namespace IT_Support_Toolkit
                     Console.WriteLine($"Output: {output}");
                     Console.WriteLine($"Error: {error}");
                     return false;
+                    */
                 }
             }
             catch (Exception ex)
