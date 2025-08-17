@@ -5,8 +5,10 @@ This tool is created to assist IT Support tasks
 ## Features
 This is some demo functions now it can use:
 - Check PC information
-- Convert Windows Home to Pro
-- Convert Windows Retail to Volume KMS
+- Check license information
+- Check network information
+- Convert Windows 10/11 Home to Pro
+- Convert Windows 10/11 Retail to Volume KMS
 - Change KMS server
 - Backup and restore drivers
 - Backup and restore WiFi
@@ -16,7 +18,7 @@ This is some demo functions now it can use:
 I will create a release on GitHub soon.
 
 Now, you can download at the link:
-https://drive.google.com/drive/folders/1UOwwZiWMacI-JX4DdAgEWg9L3jadGiPr?usp=sharing
+https://drive.google.com/drive/folders/1UOwwZiWMacI-JX4DdAgEWg9L3jadGiPr
 
 --------------------------------------------------------------------------------
 *** Copyright © Harry Hoang Le. All rights reserved. ***
