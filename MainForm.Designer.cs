@@ -89,13 +89,14 @@
             // 
             // button6
             // 
-            this.button6.Enabled = false;
+            this.button6.BackColor = System.Drawing.SystemColors.ActiveCaption;
             this.button6.Location = new System.Drawing.Point(292, 55);
             this.button6.Name = "button6";
             this.button6.Size = new System.Drawing.Size(158, 26);
             this.button6.TabIndex = 5;
             this.button6.Text = "Thông tin bản quyền";
-            this.button6.UseVisualStyleBackColor = true;
+            this.button6.UseVisualStyleBackColor = false;
+            this.button6.Click += new System.EventHandler(this.button6_Click);
             // 
             // button7
             // 
@@ -104,7 +105,7 @@
             this.button7.Name = "button7";
             this.button7.Size = new System.Drawing.Size(158, 26);
             this.button7.TabIndex = 11;
-            this.button7.Text = "Khôi phục dữ liệu";
+            this.button7.Text = "Khôi phục dữ liệu khác";
             this.button7.UseVisualStyleBackColor = true;
             // 
             // button8
@@ -134,7 +135,7 @@
             this.button10.Name = "button10";
             this.button10.Size = new System.Drawing.Size(158, 26);
             this.button10.TabIndex = 8;
-            this.button10.Text = "Sao lưu dữ liệu";
+            this.button10.Text = "Sao lưu dữ liệu khác";
             this.button10.UseVisualStyleBackColor = true;
             // 
             // button11
@@ -261,11 +262,11 @@
             this.button15.BackColor = System.Drawing.SystemColors.HotTrack;
             this.button15.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.button15.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
-            this.button15.Location = new System.Drawing.Point(270, 129);
+            this.button15.Location = new System.Drawing.Point(270, 122);
             this.button15.Name = "button15";
-            this.button15.Size = new System.Drawing.Size(205, 26);
+            this.button15.Size = new System.Drawing.Size(205, 40);
             this.button15.TabIndex = 23;
-            this.button15.Text = "Windows Retail -> Volume (KMS)";
+            this.button15.Text = "Windows 10/11\nRetail -> Volume (KMS)";
             this.button15.UseVisualStyleBackColor = false;
             this.button15.Click += new System.EventHandler(this.button15_Click);
             // 
@@ -310,7 +311,7 @@
             this.Controls.Add(this.btnCheckInfo);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Homepage";
-            this.Text = "IT Support Toolkit v0.0.10.3 Release date 2025-08-16";
+            this.Text = "IT Support Toolkit v0.0.10.4 Release date 2025-08-17";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
 

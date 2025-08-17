@@ -1,7 +1,10 @@
-﻿using Microsoft.Win32;
+﻿using Microsoft.VisualBasic;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -9,10 +12,9 @@ using System.Management;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.VisualBasic;
 using System.Windows.Forms;
 
-//version 0.0.10.3 sua loi change kms server
+//version 0.0.10.4 lay thong tin ban quyen co ban
 namespace IT_Support_Toolkit
 {
     public partial class Homepage : Form
@@ -1544,8 +1546,8 @@ namespace IT_Support_Toolkit
             string[] lines =
             {
             "Phần mềm: IT Support Toolkit",
-            "Phiên bản: 0.0.10.3",
-            "Ngày phát hành: 16/08/2025",
+            "Phiên bản: 0.0.10.4",
+            "Ngày phát hành: 17/08/2025",
             "Tác giả: Harry Hoang Le",
             "",
             "Phần mềm public mã nguồn tại: https://github.com/mrhoangit/it-support-toolkit",
@@ -1726,8 +1728,9 @@ namespace IT_Support_Toolkit
         // Biến lưu thông tin KMS server hiện tại (sẽ được lấy từ hệ thống)
         private string currentKmsServer = "";
         private string currentKmsPort = "";
+        //private object version;
 
-        // Nút hiển thị thông tin KMS server hiện tại
+        // Nút thiết lập/thay đổi KMS server
         private void button17_Click_1(object sender, EventArgs e)
         {
             try
@@ -2257,6 +2260,1074 @@ namespace IT_Support_Toolkit
             catch
             {
                 return false;
+            }
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Hiển thị form loading
+                ShowLicenseInfoProgress();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi lấy thông tin bản quyền: {ex.Message}",
+                               "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Form hiển thị progress và thông tin license
+        private void ShowLicenseInfoProgress()
+        {
+            Form progressForm = new Form()
+            {
+                Text = "Đang lấy thông tin bản quyền...",
+                Size = new Size(800, 600),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.Sizable,
+                MaximizeBox = true,
+                MinimizeBox = true,
+                ShowIcon = false
+            };
+
+            Label statusLabel = new Label()
+            {
+                Text = "Đang quét thông tin Windows...",
+                Location = new Point(10, 20),
+                Size = new Size(760, 20),
+                Font = new Font("Segoe UI", 9)
+            };
+
+            ProgressBar progressBar = new ProgressBar()
+            {
+                Location = new Point(10, 50),
+                Size = new Size(760, 25),
+                Style = ProgressBarStyle.Continuous
+            };
+
+            TextBox resultTextBox = new TextBox()
+            {
+                Multiline = true,
+                ScrollBars = ScrollBars.Both,
+                ReadOnly = true,
+                Location = new Point(10, 85),
+                Size = new Size(760, 420),
+                Font = new Font("Consolas", 9),
+                BackColor = Color.White,
+                WordWrap = false
+            };
+
+            Button copyButton = new Button()
+            {
+                Text = "📋 Copy",
+                Size = new Size(100, 35),
+                Location = new Point(570, 520),
+                UseVisualStyleBackColor = true,
+                Font = new Font("Segoe UI", 9)
+            };
+
+            Button saveButton = new Button()
+            {
+                Text = "💾 Lưu file",
+                Size = new Size(100, 35),
+                Location = new Point(680, 520),
+                UseVisualStyleBackColor = true,
+                Font = new Font("Segoe UI", 9)
+            };
+
+            Button closeButton = new Button()
+            {
+                Text = "❌ Đóng",
+                Size = new Size(100, 35),
+                Location = new Point(460, 520),
+                UseVisualStyleBackColor = true,
+                DialogResult = DialogResult.OK,
+                Font = new Font("Segoe UI", 9)
+            };
+
+            progressForm.Controls.AddRange(new Control[] {
+        statusLabel, progressBar, resultTextBox, copyButton, saveButton, closeButton
+    });
+
+            // Background worker
+            BackgroundWorker worker = new BackgroundWorker();
+            worker.WorkerReportsProgress = true;
+
+            worker.DoWork += (s, e) => {
+                LicenseInfoResult result = GetLicenseInformation(worker);
+                e.Result = result;
+            };
+
+            worker.ProgressChanged += (s, e) => {
+                progressBar.Value = e.ProgressPercentage;
+                if (e.UserState != null)
+                {
+                    statusLabel.Text = e.UserState.ToString();
+                }
+            };
+
+            worker.RunWorkerCompleted += (s, e) => {
+                if (e.Error != null)
+                {
+                    resultTextBox.Text = $"❌ Lỗi: {e.Error.Message}";
+                }
+                else
+                {
+                    LicenseInfoResult result = (LicenseInfoResult)e.Result;
+                    resultTextBox.Text = result.FormattedOutput;
+                    statusLabel.Text = "✅ Hoàn thành!";
+                    progressBar.Value = 100;
+                }
+            };
+
+            // Sự kiện Copy
+            copyButton.Click += (s, e) => {
+                if (!string.IsNullOrEmpty(resultTextBox.Text))
+                {
+                    try
+                    {
+                        Clipboard.SetText(resultTextBox.Text);
+                        copyButton.Text = "✅ Copied!";
+                        copyButton.BackColor = Color.LightGreen;
+
+                        Timer timer = new Timer();
+                        timer.Interval = 2000;
+                        timer.Tick += (sender, args) => {
+                            copyButton.Text = "📋 Copy";
+                            copyButton.BackColor = SystemColors.Control;
+                            timer.Stop();
+                            timer.Dispose();
+                        };
+                        timer.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Lỗi khi copy: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            };
+
+            // Sự kiện Save
+            saveButton.Click += (s, e) => {
+                if (!string.IsNullOrEmpty(resultTextBox.Text))
+                {
+                    try
+                    {
+                        SaveFileDialog saveDialog = new SaveFileDialog()
+                        {
+                            Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                            DefaultExt = "txt",
+                            FileName = $"LicenseInfo_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
+                        };
+
+                        if (saveDialog.ShowDialog() == DialogResult.OK)
+                        {
+                            File.WriteAllText(saveDialog.FileName, resultTextBox.Text, Encoding.UTF8);
+                            MessageBox.Show("Đã lưu thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Lỗi khi lưu file: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            };
+
+            closeButton.Click += (s, e) => progressForm.Close();
+
+            progressForm.Shown += (s, e) => worker.RunWorkerAsync();
+            progressForm.ShowDialog();
+        }
+
+        // Class để lưu kết quả
+        private class LicenseInfoResult
+        {
+            public string WindowsLicense { get; set; } = "";
+            public string OfficeLicense { get; set; } = "";
+            public string FormattedOutput { get; set; } = "";
+            public List<string> Errors { get; set; } = new List<string>();
+        }
+
+        // Hàm chính lấy thông tin license
+        private LicenseInfoResult GetLicenseInformation(BackgroundWorker worker)
+        {
+            LicenseInfoResult result = new LicenseInfoResult();
+            StringBuilder output = new StringBuilder();
+
+            try
+            {
+                // Header
+                output.AppendLine("═══════════════════════════════════════════════════════════════════");
+                output.AppendLine("                    THÔNG TIN BẢN QUYỀN WINDOWS VÀ OFFICE");
+                output.AppendLine("═══════════════════════════════════════════════════════════════════");
+                output.AppendLine($"🕐 Ngày kiểm tra: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+                output.AppendLine($"💻 Máy tính: {Environment.MachineName}");
+                output.AppendLine($"👤 Người dùng: {Environment.UserName}");
+                output.AppendLine();
+
+                // ===== WINDOWS LICENSE =====
+                worker?.ReportProgress(40, "🔍 Đang quét thông tin Windows...");
+                output.AppendLine("🔷 THÔNG TIN BẢN QUYỀN WINDOWS");
+                output.AppendLine(new string('─', 70));
+
+                string windowsInfo = GetWindowsLicenseInfo();
+                result.WindowsLicense = windowsInfo;
+                output.AppendLine(windowsInfo);
+
+                // ===== OFFICE LICENSE =====
+                worker?.ReportProgress(90, "🔍 Đang quét thông tin Office...");
+                output.AppendLine();
+                output.AppendLine("🔷 THÔNG TIN BẢN QUYỀN OFFICE");
+                output.AppendLine(new string('─', 70));
+
+                string officeInfo = GetOfficeLicenseInfo();
+                result.OfficeLicense = officeInfo;
+                output.AppendLine(officeInfo);
+
+                worker?.ReportProgress(100, "✅ Hoàn thành!");
+
+                result.FormattedOutput = output.ToString();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Errors.Add(ex.Message);
+                result.FormattedOutput = $"❌ Lỗi khi lấy thông tin: {ex.Message}\n\n{output}";
+                return result;
+            }
+        }
+
+        // Lấy thông tin bản quyền Windows
+        private string GetWindowsLicenseInfo()
+        {
+            StringBuilder info = new StringBuilder();
+
+            try
+            {
+                // Lấy thông tin Windows version chi tiết
+                string windowsVersion = GetWindowsVersionName();
+                if (!string.IsNullOrEmpty(windowsVersion))
+                {
+                    info.AppendLine($"🖥️  Phiên bản: {windowsVersion}");
+                }
+
+                // Lấy thông tin cơ bản từ WMI
+                using (var searcher = new ManagementObjectSearcher("SELECT * FROM SoftwareLicensingProduct WHERE PartialProductKey IS NOT NULL"))
+                {
+                    foreach (ManagementObject product in searcher.Get())
+                    {
+                        string name = product["Name"]?.ToString();
+                        if (!string.IsNullOrEmpty(name) && name.ToLower().Contains("windows"))
+                        {
+                            info.AppendLine($"📦 Sản phẩm: {name}");
+
+                            string status = GetLicenseStatusText(product["LicenseStatus"]);
+                            string statusIcon = status.Contains("Đã kích hoạt") ? "✅" : "❌";
+                            info.AppendLine($"{statusIcon} Trạng thái: {status}");
+
+                            info.AppendLine($"🔑 Key một phần: {product["PartialProductKey"]?.ToString()}");
+                            info.AppendLine($"📝 Mô tả: {product["Description"]?.ToString()}");
+
+                            var evalEndDate = product["EvaluationEndDate"];
+                            if (evalEndDate != null)
+                            {
+                                DateTime endDate = ManagementDateTimeConverter.ToDateTime(evalEndDate.ToString());
+                                // Chỉ hiển thị nếu không phải 1/1/1601 (tức là có thực sự có hạn)
+                                if (endDate.Year > 1601)
+                                {
+                                    info.AppendLine($"⏰ Ngày hết hạn đánh giá: {endDate:dd/MM/yyyy HH:mm:ss}");
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // Lấy thông tin chi tiết bằng slmgr
+                info.AppendLine();
+                info.AppendLine("📋 Chi tiết từ SLMGR:");
+                info.AppendLine(new string('·', 50));
+
+                string slmgrInfo = GetSlmgrInfo();
+                if (!string.IsNullOrEmpty(slmgrInfo))
+                {
+                    info.AppendLine(FormatSlmgrInfo(slmgrInfo));
+                }
+                else
+                {
+                    info.AppendLine("❌ Không thể lấy thông tin từ SLMGR");
+                }
+            }
+            catch (Exception ex)
+            {
+                info.AppendLine($"❌ Lỗi khi lấy thông tin Windows: {ex.Message}");
+            }
+
+            return info.ToString();
+        }
+
+        // Lấy tên Windows version chi tiết
+        private string GetWindowsVersionName()
+        {
+            try
+            {
+                // Ưu tiên lấy từ WMI trước
+                using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem"))
+                {
+                    foreach (ManagementObject os in searcher.Get())
+                    {
+                        string caption = os["Caption"]?.ToString() ?? "";
+                        string version = os["Version"]?.ToString() ?? "";
+                        string buildNumber = os["BuildNumber"]?.ToString() ?? "";
+
+                        if (!string.IsNullOrEmpty(caption))
+                        {
+                            // Làm sạch tên Windows
+                            caption = caption.Replace("Microsoft ", "");
+
+                            try
+                            {
+                                using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion"))
+                                {
+                                    var displayVersion = key?.GetValue("DisplayVersion")?.ToString();
+                                    var ubr = key?.GetValue("UBR")?.ToString();
+
+                                    // Thêm DisplayVersion (24H2) ngay sau tên sản phẩm
+                                    if (!string.IsNullOrEmpty(displayVersion))
+                                    {
+                                        caption += $" {displayVersion}";
+                                    }
+
+                                    // Thêm thông tin build
+                                    if (!string.IsNullOrEmpty(buildNumber))
+                                    {
+                                        caption += $" Build {buildNumber}";
+                                    }
+
+                                    // Thêm UBR cuối cùng
+                                    if (!string.IsNullOrEmpty(ubr))
+                                    {
+                                        caption += $".{ubr}";
+                                    }
+                                }
+                            }
+                            catch { }
+
+                            return caption;
+                        }
+                    }
+                }
+
+                // Fallback về Registry nếu WMI không work
+                using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion"))
+                {
+                    if (key != null)
+                    {
+                        var productName = key.GetValue("ProductName")?.ToString() ?? "";
+                        var displayVersion = key.GetValue("DisplayVersion")?.ToString() ?? "";
+                        var currentBuild = key.GetValue("CurrentBuild")?.ToString() ?? "";
+                        var ubr = key.GetValue("UBR")?.ToString() ?? "";
+
+                        var version = productName;
+                        if (!string.IsNullOrEmpty(displayVersion))
+                            version += $" {displayVersion}";
+                        else if (!string.IsNullOrEmpty(currentBuild))
+                            version += $" Build {currentBuild}";
+
+                        if (!string.IsNullOrEmpty(ubr))
+                            version += $".{ubr}";
+
+                        return version;
+                    }
+                }
+            }
+            catch { }
+            return "";
+        }
+
+        // Format thông tin SLMGR
+        private string FormatSlmgrInfo(string slmgrInfo)
+        {
+            if (string.IsNullOrEmpty(slmgrInfo))
+                return "";
+
+            var lines = slmgrInfo.Split('\n');
+            var formatted = new StringBuilder();
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                if (trimmed.Contains("Name:"))
+                    formatted.AppendLine($"   📋 {trimmed}");
+                else if (trimmed.Contains("Description:"))
+                    formatted.AppendLine($"   📝 {trimmed}");
+                else if (trimmed.Contains("License Status:"))
+                {
+                    var status = trimmed.Contains("Licensed") ? "✅" : "❌";
+                    formatted.AppendLine($"   {status} {trimmed}");
+                }
+                else if (trimmed.Contains("expiration:"))
+                    formatted.AppendLine($"   ⏰ {trimmed}");
+                else if (trimmed.Contains("KMS") || trimmed.Contains("Activation"))
+                    formatted.AppendLine($"   🔧 {trimmed}");
+                else
+                    formatted.AppendLine($"   • {trimmed}");
+            }
+
+            return formatted.ToString();
+        }
+
+        // Lấy thông tin bản quyền Office
+        private string GetOfficeLicenseInfo()
+        {
+            StringBuilder info = new StringBuilder();
+
+            try
+            {
+                List<OfficeVersion> officeVersions = FindOfficeInstallations();
+
+                if (officeVersions.Count == 0)
+                {
+                    info.AppendLine("❌ Không tìm thấy Microsoft Office được cài đặt.");
+                    return info.ToString();
+                }
+
+                // Loại bỏ duplicate và hiển thị unique installations
+                var uniqueOffices = officeVersions
+                    .GroupBy(o => o.InstallPath)
+                    .Select(g => g.First())
+                    .ToList();
+
+                foreach (var office in uniqueOffices)
+                {
+                    info.AppendLine($"📁 {office.ProductName}");
+                    info.AppendLine($"   📂 Đường dẫn: {office.InstallPath}");
+                    info.AppendLine($"   🔢 Phiên bản: {office.Version}");
+
+                    // Lấy version chi tiết
+                    string detailedVersion = GetOfficeDetailedVersion(office.InstallPath);
+                    if (!string.IsNullOrEmpty(detailedVersion))
+                    {
+                        info.AppendLine($"   🏷️  Chi tiết: {detailedVersion}");
+                    }
+
+                    // CHỈNH SỬA: Không hiển thị thông báo "tìm thấy script" nữa
+                    //string licenseInfo = GetOfficeSpecificLicenseInfo(office);
+                    //info.AppendLine($"   {licenseInfo}");
+                    //info.AppendLine();
+                }
+
+                // Lấy thông tin chi tiết từ OSPP
+                //info.AppendLine("📋 Chi tiết từ OSPP:");
+                //info.AppendLine(new string('·', 50));
+
+                string osppInfo = GetOsppInfo();
+                if (!string.IsNullOrEmpty(osppInfo))
+                {
+                    info.AppendLine(FormatOsppInfo(osppInfo));
+                }
+                else
+                {
+                    info.AppendLine("❌ Không thể lấy thông tin chi tiết Office");
+                }
+            }
+            catch (Exception ex)
+            {
+                info.AppendLine($"❌ Lỗi khi lấy thông tin Office: {ex.Message}");
+            }
+
+            return info.ToString();
+        }
+
+        // Lấy phiên bản Office chi tiết
+        private string GetOfficeDetailedVersion(string installPath)
+        {
+            try
+            {
+                var exeFiles = new[] { "WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE", "OUTLOOK.EXE" };
+
+                foreach (var exeFile in exeFiles)
+                {
+                    string exePath = Path.Combine(installPath, exeFile);
+                    if (File.Exists(exePath))
+                    {
+                        var versionInfo = FileVersionInfo.GetVersionInfo(exePath);
+                        return $"{versionInfo.FileVersion} ({versionInfo.ProductVersion})";
+                    }
+                }
+            }
+            catch { }
+            return "";
+        }
+
+        // Format thông tin OSPP
+        private string FormatOsppInfo(string osppInfo)
+        {
+            if (string.IsNullOrEmpty(osppInfo))
+                return "";
+
+            var result = new StringBuilder();
+            var lines = osppInfo.Split('\n');
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+
+                if (trimmed.StartsWith("---Processing---") ||
+                    trimmed.StartsWith("---Exiting---") ||
+                    trimmed.Length == 0 ||
+                    trimmed.All(c => c == '-'))
+                    continue;
+
+                if (trimmed.StartsWith("LICENSE NAME:"))
+                {
+                    var licenseName = trimmed.Replace("LICENSE NAME:", "").Trim();
+                    var productName = GetFriendlyOfficeProductName(licenseName);
+                    result.AppendLine();
+                    result.AppendLine($"📦 SẢN PHẨM: {productName}");
+                }
+                else if (trimmed.StartsWith("LICENSE STATUS:"))
+                {
+                    var status = trimmed.Replace("LICENSE STATUS:", "").Trim();
+                    var statusIcon = status.Contains("LICENSED") ? "✅" : "❌";
+                    result.AppendLine($"   {statusIcon} Trạng thái: {status}");
+                }
+                else if (trimmed.StartsWith("REMAINING GRACE:"))
+                {
+                    var grace = trimmed.Replace("REMAINING GRACE:", "").Trim();
+                    result.AppendLine($"   ⏰ Thời gian còn lại: {grace}");
+                }
+                else if (trimmed.StartsWith("Last 5 characters of installed product key:"))
+                {
+                    var key = trimmed.Replace("Last 5 characters of installed product key:", "").Trim();
+                    result.AppendLine($"   🔑 Key một phần: {key}");
+                }
+                else if (trimmed.StartsWith("KMS machine registry override defined:"))
+                {
+                    var kms = trimmed.Replace("KMS machine registry override defined:", "").Trim();
+                    result.AppendLine($"   🌐 KMS Server: {kms}");
+                }
+                else if (trimmed.StartsWith("PRODUCT ID:"))
+                {
+                    var productId = trimmed.Replace("PRODUCT ID:", "").Trim();
+                    result.AppendLine($"   🆔 Product ID: {productId}");
+
+                    // THÊM: Giải thích Product ID
+                    if (!string.IsNullOrEmpty(productId))
+                    {
+                        string explanation = ExplainProductId(productId);
+                        if (!string.IsNullOrEmpty(explanation))
+                        {
+                            result.AppendLine($"      💡 {explanation}");
+                        }
+                    }
+                }
+                else if (trimmed.StartsWith("LICENSE DESCRIPTION:"))
+                {
+                    var desc = trimmed.Replace("LICENSE DESCRIPTION:", "").Trim();
+                    result.AppendLine($"   📝 Mô tả: {desc}");
+                }
+            }
+
+            return result.ToString();
+        }
+
+        /// THÊM MỚI: Hàm giải thích Product ID
+        private string ExplainProductId(string productId)
+        {
+            if (string.IsNullOrEmpty(productId) || productId.Length < 20)
+                return "";
+
+            try
+            {
+                var parts = productId.Split('-');
+                if (parts.Length >= 4)
+                {
+                    var productCode = parts[0];
+                    var channelCode = parts[1];
+
+                    string productType;
+                    switch (productCode)
+                    {
+                        case "00502":
+                            productType = "Office Professional Plus";
+                            break;
+                        case "00397":
+                            productType = "Office Standard";
+                            break;
+                        case "00424":
+                            productType = "Office Professional";
+                            break;
+                        case "00334":
+                            productType = "Project Professional";
+                            break;
+                        case "00431":
+                            productType = "Project Standard";
+                            break;
+                        case "00051":
+                            productType = "Visio Professional";
+                            break;
+                        case "00052":
+                            productType = "Visio Standard";
+                            break;
+                        default:
+                            productType = $"Product Code {productCode}";
+                            break;
+                    }
+
+                    string channelType;
+                    switch (channelCode)
+                    {
+                        case "40000":
+                            channelType = "Volume License (KMS/MAK)";
+                            break;
+                        case "80000":
+                            channelType = "Retail";
+                            break;
+                        case "90000":
+                            channelType = "OEM";
+                            break;
+                        default:
+                            channelType = $"Channel {channelCode}";
+                            break;
+                    }
+
+                    return $"Mã định danh: {productType} - {channelType}";
+                }
+            }
+            catch { }
+
+            return "Mã định danh sản phẩm Office";
+        }
+
+        // Chuyển đổi tên Office product
+        private string GetFriendlyOfficeProductName(string licenseName)
+        {
+            if (string.IsNullOrEmpty(licenseName))
+                return "Không xác định";
+
+            var productMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Office24ProPlus2024VL_KMS_Client_AE", "Microsoft Office Professional Plus 2024" },
+        { "Office24ProjectPro2024VL_KMS_Client_AE", "Microsoft Project Professional 2024" },
+        { "Office24VisioPro2024VL_KMS_Client_AE", "Microsoft Visio Professional 2024" },
+        { "Office21ProPlus2021VL_KMS_Client_AE", "Microsoft Office Professional Plus 2021" },
+        { "Office21ProjectPro2021VL_KMS_Client_AE", "Microsoft Project Professional 2021" },
+        { "Office21VisioPro2021VL_KMS_Client_AE", "Microsoft Visio Professional 2021" },
+        { "Office19ProPlus2019VL_KMS_Client_AE", "Microsoft Office Professional Plus 2019" },
+        { "Office16ProPlusVL_KMS_Client", "Microsoft Office Professional Plus 2016" }
+    };
+
+            foreach (var kvp in productMap)
+            {
+                if (licenseName.Contains(kvp.Key))
+                    return kvp.Value;
+            }
+
+            return licenseName.Replace("Office 24, ", "").Replace(" edition", "");
+        }
+
+        // Class cho Office version
+        private class OfficeVersion
+        {
+            public string ProductName { get; set; }
+            public string Version { get; set; }
+            public string InstallPath { get; set; }
+            public string RegistryPath { get; set; }
+        }
+
+        // Tìm các Office installations
+        private List<OfficeVersion> FindOfficeInstallations()
+        {
+            List<OfficeVersion> offices = new List<OfficeVersion>();
+
+            try
+            {
+                // Phương pháp 1: Kiểm tra đường dẫn cố định
+                var fixedPaths = new[]
+                {
+            new { Path = @"C:\Program Files\Microsoft Office\Office16", Version = "16.0", Name = "Microsoft Office 2016/2019/2021/365" },
+            new { Path = @"C:\Program Files (x86)\Microsoft Office\Office16", Version = "16.0", Name = "Microsoft Office 2016/2019/2021/365" },
+            new { Path = @"C:\Program Files\Microsoft Office\Office15", Version = "15.0", Name = "Microsoft Office 2013" },
+            new { Path = @"C:\Program Files (x86)\Microsoft Office\Office15", Version = "15.0", Name = "Microsoft Office 2013" },
+            new { Path = @"C:\Program Files\Microsoft Office\Office14", Version = "14.0", Name = "Microsoft Office 2010" },
+            new { Path = @"C:\Program Files (x86)\Microsoft Office\Office14", Version = "14.0", Name = "Microsoft Office 2010" }
+        };
+
+                foreach (var fixedPath in fixedPaths)
+                {
+                    if (Directory.Exists(fixedPath.Path))
+                    {
+                        var office = new OfficeVersion
+                        {
+                            ProductName = fixedPath.Name,
+                            Version = fixedPath.Version,
+                            InstallPath = fixedPath.Path,
+                            RegistryPath = ""
+                        };
+
+                        offices.Add(office);
+                    }
+                }
+
+                // Phương pháp 2: Kiểm tra qua Registry (nếu chưa tìm thấy)
+                if (offices.Count == 0)
+                {
+                    string[] officePaths = {
+                @"SOFTWARE\Microsoft\Office",
+                @"SOFTWARE\WOW6432Node\Microsoft\Office"
+            };
+
+                    foreach (string officePath in officePaths)
+                    {
+                        using (var officeKey = Registry.LocalMachine.OpenSubKey(officePath))
+                        {
+                            if (officeKey != null)
+                            {
+                                foreach (string versionName in officeKey.GetSubKeyNames())
+                                {
+                                    if (float.TryParse(versionName, out float version) && version >= 12.0)
+                                    {
+                                        string productName = GetOfficeProductName(version);
+                                        string installPath = GetOfficeInstallPath(officePath, versionName);
+
+                                        if (!string.IsNullOrEmpty(productName) && !installPath.Contains("Không xác định"))
+                                        {
+                                            offices.Add(new OfficeVersion
+                                            {
+                                                ProductName = productName,
+                                                Version = versionName,
+                                                InstallPath = installPath,
+                                                RegistryPath = $"{officePath}\\{versionName}"
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Phương pháp 3: Kiểm tra ClickToRun (Office 365/2019+)
+                try
+                {
+                    using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Office\ClickToRun\Configuration"))
+                    {
+                        if (key != null)
+                        {
+                            var clientFolder = key.GetValue("ClientFolder")?.ToString();
+                            var productReleaseIds = key.GetValue("ProductReleaseIds")?.ToString();
+                            var versionToReport = key.GetValue("VersionToReport")?.ToString();
+
+                            if (!string.IsNullOrEmpty(clientFolder) && Directory.Exists(clientFolder))
+                            {
+                                var office = new OfficeVersion
+                                {
+                                    ProductName = GetClickToRunProductName(productReleaseIds, versionToReport),
+                                    Version = versionToReport ?? "16.0",
+                                    InstallPath = clientFolder,
+                                    RegistryPath = @"SOFTWARE\Microsoft\Office\ClickToRun\Configuration"
+                                };
+
+                                // Kiểm tra xem đã có chưa (tránh duplicate)
+                                if (!offices.Any(o => o.InstallPath.Equals(clientFolder, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    offices.Add(office);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                // Phương pháp 4: Tìm qua Windows Apps (Microsoft Store version)
+                try
+                {
+                    var appxPath = @"SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
+                    using (var key = Registry.LocalMachine.OpenSubKey(appxPath))
+                    {
+                        if (key != null)
+                        {
+                            foreach (var subKeyName in key.GetSubKeyNames())
+                            {
+                                if (subKeyName.Contains("Microsoft.Office") || subKeyName.Contains("Microsoft.OfficeDesktop"))
+                                {
+                                    using (var packageKey = key.OpenSubKey(subKeyName))
+                                    {
+                                        var packageRootFolder = packageKey?.GetValue("PackageRootFolder")?.ToString();
+                                        if (!string.IsNullOrEmpty(packageRootFolder) && Directory.Exists(packageRootFolder))
+                                        {
+                                            var office = new OfficeVersion
+                                            {
+                                                ProductName = "Microsoft Office (Microsoft Store)",
+                                                Version = "16.0",
+                                                InstallPath = packageRootFolder,
+                                                RegistryPath = $"{appxPath}\\{subKeyName}"
+                                            };
+
+                                            if (!offices.Any(o => o.InstallPath.Equals(packageRootFolder, StringComparison.OrdinalIgnoreCase)))
+                                            {
+                                                offices.Add(office);
+                                                break; // Chỉ lấy 1 cái
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                // Loại bỏ duplicate dựa trên InstallPath
+                offices = offices
+                    .GroupBy(o => o.InstallPath.ToLower())
+                    .Select(g => g.First())
+                    .ToList();
+
+            }
+            catch (Exception ex)
+            {
+                // Trả về danh sách rỗng thay vì throw exception
+                offices.Clear();
+            }
+
+            return offices;
+        }
+
+        // Lấy tên sản phẩm ClickToRun
+        private string GetClickToRunProductName(string productReleaseIds, string version)
+        {
+            if (string.IsNullOrEmpty(productReleaseIds))
+                return "Microsoft Office 365/2019/2021";
+
+            // Parse product IDs để xác định chính xác sản phẩm
+            var products = new List<string>();
+
+            if (productReleaseIds.Contains("O365ProPlusRetail") || productReleaseIds.Contains("O365BusinessRetail"))
+                products.Add("Office 365");
+            if (productReleaseIds.Contains("ProPlus2019Retail") || productReleaseIds.Contains("ProPlus2019Volume"))
+                products.Add("Office 2019");
+            if (productReleaseIds.Contains("ProPlus2021Retail") || productReleaseIds.Contains("ProPlus2021Volume"))
+                products.Add("Office 2021");
+            if (productReleaseIds.Contains("ProPlus2024Retail") || productReleaseIds.Contains("ProPlus2024Volume"))
+                products.Add("Office 2024");
+
+            if (products.Count > 0)
+                return $"Microsoft {string.Join("/", products)}";
+
+            return $"Microsoft Office 365/2019/2021 ({version})";
+        }
+
+        // Lấy tên sản phẩm Office
+        private string GetOfficeProductName(float version)
+        {
+            switch (version)
+            {
+                case 12.0f: return "Microsoft Office 2007";
+                case 14.0f: return "Microsoft Office 2010";
+                case 15.0f: return "Microsoft Office 2013";
+                case 16.0f: return "Microsoft Office 2016/2019/2021/365";
+                default: return $"Microsoft Office {version}";
+            }
+        }
+
+        // Lấy đường dẫn cài đặt Office
+        private string GetOfficeInstallPath(string officePath, string version)
+        {
+            try
+            {
+                using (var versionKey = Registry.LocalMachine.OpenSubKey($"{officePath}\\{version}\\Common\\InstallRoot"))
+                {
+                    var path = versionKey?.GetValue("Path")?.ToString();
+                    return !string.IsNullOrEmpty(path) && Directory.Exists(path) ? path : "Không xác định";
+                }
+            }
+            catch
+            {
+                return "Không xác định";
+            }
+        }
+
+        // Lấy thông tin license cụ thể của Office
+        private string GetOfficeSpecificLicenseInfo(OfficeVersion office)
+        {
+            try
+            {
+                string osppPath = Path.Combine(office.InstallPath, "ospp.vbs");
+                if (!File.Exists(osppPath))
+                {
+                    string[] possiblePaths = {
+                Path.Combine(office.InstallPath, "OSPP.VBS"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                            "Microsoft Office", "Office" + office.Version.Replace(".0", ""), "ospp.vbs"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                            "Microsoft Office", "Office" + office.Version.Replace(".0", ""), "ospp.vbs")
+            };
+
+                    osppPath = possiblePaths.FirstOrDefault(File.Exists);
+                }
+
+                if (!string.IsNullOrEmpty(osppPath) && File.Exists(osppPath))
+                {
+                    return "✅ Tìm thấy script kiểm tra license";
+                }
+                else
+                {
+                    return "❌ Không tìm thấy script kiểm tra license";
+                }
+            }
+            catch
+            {
+                return "❌ Lỗi khi kiểm tra license";
+            }
+        }
+
+        // Lấy thông tin từ slmgr
+        private string GetSlmgrInfo()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "cscript.exe",
+                    Arguments = "//nologo C:\\Windows\\System32\\slmgr.vbs /dli",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.UTF8
+                };
+
+                using (Process process = Process.Start(psi))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    return string.IsNullOrEmpty(error) ? output.Trim() : $"Error: {error}";
+                }
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        // Lấy thông tin từ ospp.vbs
+        private string GetOsppInfo()
+        {
+            try
+            {
+                // Tìm tất cả các đường dẫn có thể có ospp.vbs
+                string[] possiblePaths = {
+            @"C:\Program Files\Microsoft Office\Office16\ospp.vbs",
+            @"C:\Program Files (x86)\Microsoft Office\Office16\ospp.vbs",
+            @"C:\Program Files\Microsoft Office\Office15\ospp.vbs",
+            @"C:\Program Files (x86)\Microsoft Office\Office15\ospp.vbs",
+            @"C:\Program Files\Microsoft Office\Office14\ospp.vbs",
+            @"C:\Program Files (x86)\Microsoft Office\Office14\ospp.vbs"
+        };
+
+                string osppPath = possiblePaths.FirstOrDefault(File.Exists);
+
+                // Nếu không tìm thấy ở đường dẫn cố định, tìm qua ClickToRun
+                if (string.IsNullOrEmpty(osppPath))
+                {
+                    try
+                    {
+                        using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Office\ClickToRun\Configuration"))
+                        {
+                            var clientFolder = key?.GetValue("ClientFolder")?.ToString();
+                            if (!string.IsNullOrEmpty(clientFolder))
+                            {
+                                var clickToRunOspp = Path.Combine(clientFolder, "Office16", "ospp.vbs");
+                                if (File.Exists(clickToRunOspp))
+                                {
+                                    osppPath = clickToRunOspp;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                // Nếu vẫn không tìm thấy, tìm bằng Directory.GetFiles
+                if (string.IsNullOrEmpty(osppPath))
+                {
+                    try
+                    {
+                        var programFiles = new[] {
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+                };
+
+                        foreach (var programFile in programFiles)
+                        {
+                            var officePath = Path.Combine(programFile, "Microsoft Office");
+                            if (Directory.Exists(officePath))
+                            {
+                                var osppFiles = Directory.GetFiles(officePath, "ospp.vbs", SearchOption.AllDirectories);
+                                if (osppFiles.Length > 0)
+                                {
+                                    osppPath = osppFiles[0];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                if (!string.IsNullOrEmpty(osppPath) && File.Exists(osppPath))
+                {
+                    ProcessStartInfo psi = new ProcessStartInfo
+                    {
+                        FileName = "cscript.exe",
+                        Arguments = $"//nologo \"{osppPath}\" /dstatus",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        StandardOutputEncoding = Encoding.UTF8
+                    };
+
+                    using (Process process = Process.Start(psi))
+                    {
+                        string output = process.StandardOutput.ReadToEnd();
+                        string error = process.StandardError.ReadToEnd();
+                        process.WaitForExit();
+
+                        if (string.IsNullOrEmpty(error) && !string.IsNullOrEmpty(output))
+                        {
+                            return output.Trim();
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return "";
+        }
+                
+        // Chuyển đổi license status thành text
+        private string GetLicenseStatusText(object status)
+        {
+            if (status == null) return "Không xác định";
+
+            switch (status.ToString())
+            {
+                case "0": return "Unlicensed (Chưa có bản quyền)";
+                case "1": return "Licensed (Đã kích hoạt)";
+                case "2": return "OOB Grace (Thời gian ân hạn)";
+                case "3": return "OOT Grace (Vượt quá thời gian ân hạn)";
+                case "4": return "NonGenuine Grace (Không chính hãng)";
+                case "5": return "Notification (Thông báo)";
+                case "6": return "Extended Grace (Gia hạn thêm)";
+                default: return $"Không xác định ({status})";
             }
         }
     }
