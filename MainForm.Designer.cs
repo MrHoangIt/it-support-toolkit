@@ -60,7 +60,7 @@
             this.btnCheckInfo.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
             this.btnCheckInfo.Location = new System.Drawing.Point(91, 55);
             this.btnCheckInfo.Name = "btnCheckInfo";
-            this.btnCheckInfo.Size = new System.Drawing.Size(158, 26);
+            this.btnCheckInfo.Size = new System.Drawing.Size(158, 27);
             this.btnCheckInfo.TabIndex = 0;
             this.btnCheckInfo.Text = "Thông tin máy tính";
             this.btnCheckInfo.UseVisualStyleBackColor = false;
@@ -71,7 +71,7 @@
             this.button3.Enabled = false;
             this.button3.Location = new System.Drawing.Point(491, 55);
             this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(158, 26);
+            this.button3.Size = new System.Drawing.Size(158, 27);
             this.button3.TabIndex = 2;
             this.button3.Text = "Thông tin mạng";
             this.button3.UseVisualStyleBackColor = true;
@@ -82,7 +82,7 @@
             this.button5.Enabled = false;
             this.button5.Location = new System.Drawing.Point(292, 378);
             this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(158, 26);
+            this.button5.Size = new System.Drawing.Size(158, 27);
             this.button5.TabIndex = 4;
             this.button5.Text = "Tắt bitlocker";
             this.button5.UseVisualStyleBackColor = true;
@@ -92,7 +92,7 @@
             this.button6.BackColor = System.Drawing.SystemColors.ActiveCaption;
             this.button6.Location = new System.Drawing.Point(292, 55);
             this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(158, 26);
+            this.button6.Size = new System.Drawing.Size(158, 27);
             this.button6.TabIndex = 5;
             this.button6.Text = "Thông tin bản quyền";
             this.button6.UseVisualStyleBackColor = false;
@@ -103,7 +103,7 @@
             this.button7.Enabled = false;
             this.button7.Location = new System.Drawing.Point(292, 276);
             this.button7.Name = "button7";
-            this.button7.Size = new System.Drawing.Size(158, 26);
+            this.button7.Size = new System.Drawing.Size(158, 27);
             this.button7.TabIndex = 11;
             this.button7.Text = "Khôi phục dữ liệu khác";
             this.button7.UseVisualStyleBackColor = true;
@@ -113,7 +113,7 @@
             this.button8.Enabled = false;
             this.button8.Location = new System.Drawing.Point(292, 193);
             this.button8.Name = "button8";
-            this.button8.Size = new System.Drawing.Size(158, 26);
+            this.button8.Size = new System.Drawing.Size(158, 27);
             this.button8.TabIndex = 10;
             this.button8.Text = "Sao lưu bản quyền";
             this.button8.UseVisualStyleBackColor = true;
@@ -123,7 +123,7 @@
             this.button9.Enabled = false;
             this.button9.Location = new System.Drawing.Point(292, 232);
             this.button9.Name = "button9";
-            this.button9.Size = new System.Drawing.Size(158, 26);
+            this.button9.Size = new System.Drawing.Size(158, 27);
             this.button9.TabIndex = 9;
             this.button9.Text = "Sao lưu Zalo";
             this.button9.UseVisualStyleBackColor = true;
@@ -133,7 +133,7 @@
             this.button10.Enabled = false;
             this.button10.Location = new System.Drawing.Point(91, 276);
             this.button10.Name = "button10";
-            this.button10.Size = new System.Drawing.Size(158, 26);
+            this.button10.Size = new System.Drawing.Size(158, 27);
             this.button10.TabIndex = 8;
             this.button10.Text = "Sao lưu dữ liệu khác";
             this.button10.UseVisualStyleBackColor = true;
@@ -145,7 +145,7 @@
             this.button11.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
             this.button11.Location = new System.Drawing.Point(491, 193);
             this.button11.Name = "button11";
-            this.button11.Size = new System.Drawing.Size(158, 26);
+            this.button11.Size = new System.Drawing.Size(158, 27);
             this.button11.TabIndex = 7;
             this.button11.Text = "Sao lưu driver";
             this.button11.UseVisualStyleBackColor = false;
@@ -157,7 +157,7 @@
             this.button12.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.button12.Location = new System.Drawing.Point(91, 193);
             this.button12.Name = "button12";
-            this.button12.Size = new System.Drawing.Size(158, 26);
+            this.button12.Size = new System.Drawing.Size(158, 27);
             this.button12.TabIndex = 6;
             this.button12.Text = "Sao lưu wifi";
             this.button12.UseVisualStyleBackColor = false;
@@ -168,7 +168,7 @@
             this.button16.Enabled = false;
             this.button16.Location = new System.Drawing.Point(292, 337);
             this.button16.Name = "button16";
-            this.button16.Size = new System.Drawing.Size(158, 26);
+            this.button16.Size = new System.Drawing.Size(158, 27);
             this.button16.TabIndex = 14;
             this.button16.Text = "Hiện file ẩn";
             this.button16.UseVisualStyleBackColor = true;
@@ -180,7 +180,7 @@
             this.btnRemoveTemp.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
             this.btnRemoveTemp.Location = new System.Drawing.Point(91, 337);
             this.btnRemoveTemp.Name = "btnRemoveTemp";
-            this.btnRemoveTemp.Size = new System.Drawing.Size(158, 26);
+            this.btnRemoveTemp.Size = new System.Drawing.Size(158, 27);
             this.btnRemoveTemp.TabIndex = 13;
             this.btnRemoveTemp.Text = "Xóa file rác";
             this.btnRemoveTemp.UseVisualStyleBackColor = false;
@@ -191,7 +191,7 @@
             this.button18.Enabled = false;
             this.button18.Location = new System.Drawing.Point(91, 378);
             this.button18.Name = "button18";
-            this.button18.Size = new System.Drawing.Size(158, 26);
+            this.button18.Size = new System.Drawing.Size(158, 27);
             this.button18.TabIndex = 12;
             this.button18.Text = "Cài đặt phần mềm";
             this.button18.UseVisualStyleBackColor = true;
@@ -202,7 +202,7 @@
             this.button1.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.button1.Location = new System.Drawing.Point(91, 232);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(158, 26);
+            this.button1.Size = new System.Drawing.Size(158, 27);
             this.button1.TabIndex = 16;
             this.button1.Text = "Khôi phục wifi";
             this.button1.UseVisualStyleBackColor = false;
@@ -215,7 +215,7 @@
             this.button4.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
             this.button4.Location = new System.Drawing.Point(491, 232);
             this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(158, 26);
+            this.button4.Size = new System.Drawing.Size(158, 27);
             this.button4.TabIndex = 17;
             this.button4.Text = "Khôi phục driver";
             this.button4.UseVisualStyleBackColor = false;
@@ -228,7 +228,7 @@
             this.button2.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
             this.button2.Location = new System.Drawing.Point(491, 378);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(158, 26);
+            this.button2.Size = new System.Drawing.Size(158, 27);
             this.button2.TabIndex = 20;
             this.button2.Text = "Thông tin phần mềm";
             this.button2.UseVisualStyleBackColor = false;
@@ -239,7 +239,7 @@
             this.button13.Enabled = false;
             this.button13.Location = new System.Drawing.Point(491, 337);
             this.button13.Name = "button13";
-            this.button13.Size = new System.Drawing.Size(158, 26);
+            this.button13.Size = new System.Drawing.Size(158, 27);
             this.button13.TabIndex = 21;
             this.button13.Text = "Lịch sử tắt mở máy";
             this.button13.UseVisualStyleBackColor = true;
@@ -249,11 +249,11 @@
             this.button14.BackColor = System.Drawing.SystemColors.HotTrack;
             this.button14.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.button14.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
-            this.button14.Location = new System.Drawing.Point(91, 129);
+            this.button14.Location = new System.Drawing.Point(91, 122);
             this.button14.Name = "button14";
-            this.button14.Size = new System.Drawing.Size(158, 26);
+            this.button14.Size = new System.Drawing.Size(158, 40);
             this.button14.TabIndex = 22;
-            this.button14.Text = "Windows Home -> Pro";
+            this.button14.Text = "Windows 10/11\nHome -> Pro";
             this.button14.UseVisualStyleBackColor = false;
             this.button14.Click += new System.EventHandler(this.button14_Click_1);
             // 
@@ -277,7 +277,7 @@
             this.button17.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
             this.button17.Location = new System.Drawing.Point(491, 129);
             this.button17.Name = "button17";
-            this.button17.Size = new System.Drawing.Size(158, 26);
+            this.button17.Size = new System.Drawing.Size(158, 27);
             this.button17.TabIndex = 24;
             this.button17.Text = "Thay đổi KMS server";
             this.button17.UseVisualStyleBackColor = false;
