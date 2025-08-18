@@ -3157,7 +3157,7 @@ namespace IT_Support_Toolkit
                     .ToList();
 
             }
-            catch (Exception ex)
+            catch
             {
                 // Trả về danh sách rỗng thay vì throw exception
                 offices.Clear();
@@ -3809,5 +3809,200 @@ namespace IT_Support_Toolkit
                 this.Close();
             }
         }
+
+        // Import SendMessage từ user32.dll
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, string lParam);
+
+        private void button16_Click(object sender, EventArgs e)
+        {
+            ShowHiddenFilesCheckboxDialog();
+        }
+
+        private void ShowHiddenFilesCheckboxDialog()
+        {
+            HiddenFileStatus currentStatus = GetCurrentHiddenFileStatus();
+
+            Form optionsForm = new Form();
+            optionsForm.Text = "Tùy chỉnh hiển thị file";
+            optionsForm.Size = new Size(350, 250);
+            optionsForm.StartPosition = FormStartPosition.CenterParent;
+            optionsForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+            optionsForm.MaximizeBox = false;
+            optionsForm.MinimizeBox = false;
+
+            // Hướng dẫn trực quan bằng CheckBox
+            CheckBox chkDemoOn = new CheckBox();
+            chkDemoOn.Checked = true;
+            chkDemoOn.Enabled = false;
+            chkDemoOn.Location = new Point(40, 10);
+            chkDemoOn.Size = new Size(15, 15);
+
+
+            Label lblOn = new Label();
+            lblOn.Text = " = Đã bật";
+            lblOn.Location = new Point(55, 10);
+            lblOn.AutoSize = true;
+
+            CheckBox chkDemoOff = new CheckBox();
+            chkDemoOff.Checked = false;
+            chkDemoOff.Enabled = false;
+            chkDemoOff.Location = new Point(130, 10);
+            chkDemoOff.Size = new Size(15, 15);
+
+            Label lblOff = new Label();
+            lblOff.Text = " = Đang tắt";
+            lblOff.Location = new Point(145, 10);
+            lblOff.AutoSize = true;
+
+            optionsForm.Controls.Add(chkDemoOn);            
+            optionsForm.Controls.Add(lblOn);
+            optionsForm.Controls.Add(chkDemoOff);
+            optionsForm.Controls.Add(lblOff);
+
+            // Checkbox 1: File ẩn
+            CheckBox chkHidden = new CheckBox();
+            chkHidden.Text = "Hiện file ẩn (Hidden files)";
+            chkHidden.Location = new Point(30, 45);
+            chkHidden.AutoSize = true;
+            chkHidden.Checked = currentStatus.HiddenFilesVisible;
+            optionsForm.Controls.Add(chkHidden);
+
+            // Checkbox 2: File hệ thống
+            CheckBox chkSystem = new CheckBox();
+            chkSystem.Text = "Hiện file hệ thống (System files)";
+            chkSystem.Location = new Point(30, 80);
+            chkSystem.AutoSize = true;
+            chkSystem.Checked = currentStatus.SystemFilesVisible;
+            optionsForm.Controls.Add(chkSystem);
+
+            // Checkbox 3: Phần mở rộng file
+            CheckBox chkExt = new CheckBox();
+            chkExt.Text = "Hiện phần mở rộng file (File extensions)";
+            chkExt.Location = new Point(30, 115);
+            chkExt.AutoSize = true;
+
+            // đọc registry HideFileExt: 0 = hiện, 1 = ẩn
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced", false))
+            {
+                if (key != null)
+                {
+                    object extValue = key.GetValue("HideFileExt", 1);
+                    chkExt.Checked = extValue.ToString() == "0";
+                }
+            }
+            optionsForm.Controls.Add(chkExt);
+
+            // Nút OK
+            Button btnOK = new Button();
+            btnOK.Text = "OK";
+            btnOK.Location = new Point(70, 160);
+            btnOK.Click += (s, e) =>
+            {
+                ApplyHiddenFilesSettings(chkHidden.Checked, chkSystem.Checked, chkExt.Checked);
+                optionsForm.Close();
+            };
+            optionsForm.Controls.Add(btnOK);
+
+            // Nút Hủy
+            Button btnCancel = new Button();
+            btnCancel.Text = "Hủy";
+            btnCancel.Location = new Point(180, 160);
+            btnCancel.Click += (s, e) => optionsForm.Close();
+            optionsForm.Controls.Add(btnCancel);
+
+            optionsForm.ShowDialog();
+        }
+
+        // Struct để lưu trạng thái file ẩn
+        private struct HiddenFileStatus
+        {
+            public bool HiddenFilesVisible;
+            public bool SystemFilesVisible;
+        }
+
+        // Lấy trạng thái hiện tại của file ẩn
+        private HiddenFileStatus GetCurrentHiddenFileStatus()
+        {
+            HiddenFileStatus status = new HiddenFileStatus();
+
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced", false))
+                {
+                    if (key != null)
+                    {
+                        // Hidden = 1: Hiện file ẩn, Hidden = 2: Không hiện file ẩn
+                        object hiddenValue = key.GetValue("Hidden", 2);
+                        status.HiddenFilesVisible = hiddenValue.ToString() == "1";
+
+                        // ShowSuperHidden = 1: Hiện system files, ShowSuperHidden = 0: Không hiện
+                        object systemValue = key.GetValue("ShowSuperHidden", 0);
+                        status.SystemFilesVisible = systemValue.ToString() == "1";
+                    }
+                }
+            }
+            catch
+            {
+                status.HiddenFilesVisible = false;
+                status.SystemFilesVisible = false;
+            }
+
+            return status;
+        }
+
+        // Làm mới File Explorer để áp dụng thay đổi
+        private void RefreshExplorer()
+        {
+            try
+            {
+                // Gửi thông báo đến tất cả windows về thay đổi setting
+                const int HWND_BROADCAST = 0xFFFF;
+                const uint WM_SETTINGCHANGE = 0x001A;
+
+                SendMessage((IntPtr)HWND_BROADCAST, WM_SETTINGCHANGE, IntPtr.Zero, "ShellState");
+
+                // Đợi một chút để hệ thống áp dụng thay đổi
+                System.Threading.Thread.Sleep(500);
+            }
+            catch
+            {
+                // Nếu không làm mới được, người dùng có thể F5 hoặc restart Explorer
+            }
+        }
+
+        private void ApplyHiddenFilesSettings(bool showHidden, bool showSystem, bool showExtensions)
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced", true))
+                {
+                    if (key != null)
+                    {
+                        key.SetValue("Hidden", showHidden ? 1 : 2, RegistryValueKind.DWord);
+                        key.SetValue("ShowSuperHidden", showSystem ? 1 : 0, RegistryValueKind.DWord);
+                        key.SetValue("HideFileExt", showExtensions ? 0 : 1, RegistryValueKind.DWord);
+
+                        RefreshExplorer();
+                    }
+                }
+
+                MessageBox.Show("✅ Cập nhật thành công!\n\n" +
+                                $"• File ẩn: {(showHidden ? "Hiện" : "Ẩn")}\n" +
+                                $"• File hệ thống: {(showSystem ? "Hiện" : "Ẩn")}\n" +
+                                $"• Phần mở rộng: {(showExtensions ? "Hiện" : "Ẩn")}",
+                                "Thành công",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi áp dụng cài đặt:\n\n" + ex.Message,
+                               "Lỗi",
+                               MessageBoxButtons.OK,
+                               MessageBoxIcon.Error);
+            }
+        }
+
     }
 }
