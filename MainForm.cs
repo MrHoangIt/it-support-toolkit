@@ -3484,28 +3484,28 @@ namespace IT_Support_Toolkit
 
                 // Registry hives checkboxes
                 chkHKLM = new CheckBox();
-                chkHKLM.Text = "HKEY_LOCAL_MACHINE (HKLM) - Cấu hình hệ thống";
+                chkHKLM.Text = "HKEY_LOCAL_MACHINE (HKLM)";
                 chkHKLM.Location = new Point(40, 90);
                 chkHKLM.Size = new Size(420, 25);
                 //chkHKLM.Checked = true; // Mặc định chọn HKLM
 
                 chkHKCU = new CheckBox();
-                chkHKCU.Text = "HKEY_CURRENT_USER (HKCU) - Cấu hình user hiện tại";
+                chkHKCU.Text = "HKEY_CURRENT_USER (HKCU)";
                 chkHKCU.Location = new Point(40, 120);
                 chkHKCU.Size = new Size(420, 25);
 
                 chkHKCR = new CheckBox();
-                chkHKCR.Text = "HKEY_CLASSES_ROOT (HKCR) - Thông tin file association";
+                chkHKCR.Text = "HKEY_CLASSES_ROOT (HKCR)";
                 chkHKCR.Location = new Point(40, 150);
                 chkHKCR.Size = new Size(420, 25);
 
                 chkHKU = new CheckBox();
-                chkHKU.Text = "HKEY_USERS (HKU) - Tất cả user profiles";
+                chkHKU.Text = "HKEY_USERS (HKU)";
                 chkHKU.Location = new Point(40, 180);
                 chkHKU.Size = new Size(420, 25);
 
                 chkHKCC = new CheckBox();
-                chkHKCC.Text = "HKEY_CURRENT_CONFIG (HKCC) - Cấu hình phần cứng";
+                chkHKCC.Text = "HKEY_CURRENT_CONFIG (HKCC)";
                 chkHKCC.Location = new Point(40, 210);
                 chkHKCC.Size = new Size(420, 25);
 
