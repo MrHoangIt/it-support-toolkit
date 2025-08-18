@@ -10,6 +10,7 @@ This is some demo functions now it can use:
 - Convert Windows 10/11 Home to Pro
 - Convert Windows 10/11 Retail to Volume KMS
 - Change KMS server
+- Backup registry
 - Backup and restore drivers
 - Backup and restore WiFi
 - User Temporary File Cleanup
