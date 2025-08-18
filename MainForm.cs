@@ -12,9 +12,13 @@ using System.Management;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
-//version 0.0.10.4 lay thong tin ban quyen co ban
+//Software: IT Support Toolkit
+//Author: Harry Hoang Le
+//Version 0.0.10.5 realease date 18/08/2025
+//Update: xem network, backup registry, improve temporary file cleanup
 namespace IT_Support_Toolkit
 {
     public partial class Homepage : Form
@@ -439,55 +443,112 @@ namespace IT_Support_Toolkit
         {
             try
             {
-                // Các thư mục cần dọn cho user hiện tại
-                string[] paths = {
+                // Danh sách thư mục gốc cần dọn
+                var rawPaths = new[]
+                {
             Environment.GetEnvironmentVariable("TEMP"),
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Temp",
-            //Environment.GetFolderPath(Environment.SpecialFolder.Recent)
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp")
         };
 
-                int deletedFiles = 0;
-                long freedBytes = 0;
+                // Loại bỏ các thư mục con trùng lặp (chỉ giữ thư mục gốc)
+                var paths = rawPaths
+                    .Where(p => !string.IsNullOrWhiteSpace(p) && Directory.Exists(p))
+                    .Select(p => Path.GetFullPath(p.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
 
-                foreach (string path in paths)
+                // Loại bỏ các thư mục là con của thư mục khác trong danh sách
+                for (int i = paths.Count - 1; i >= 0; i--)
                 {
-                    if (System.IO.Directory.Exists(path))
+                    for (int j = 0; j < paths.Count; j++)
                     {
-                        // Xóa file
-                        foreach (string file in System.IO.Directory.GetFiles(path))
+                        if (i != j && paths[i].StartsWith(paths[j] + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                         {
-                            try
-                            {
-                                long size = new System.IO.FileInfo(file).Length;
-                                System.IO.File.Delete(file);
-                                deletedFiles++;
-                                freedBytes += size;
-                            }
-                            catch { /* Bỏ qua nếu file đang được sử dụng */ }
-                        }
-
-                        // Xóa thư mục con
-                        foreach (string dir in System.IO.Directory.GetDirectories(path))
-                        {
-                            try
-                            {
-                                long dirSize = GetDirectorySize(dir);
-                                System.IO.Directory.Delete(dir, true);
-                                deletedFiles++;
-                                freedBytes += dirSize;
-                            }
-                            catch { /* Bỏ qua nếu thư mục đang được sử dụng */ }
+                            paths.RemoveAt(i);
+                            break;
                         }
                     }
                 }
 
-                double freedMB = Math.Round(freedBytes / (1024.0 * 1024.0), 2);
-                MessageBox.Show(
-                    $"Đã xóa {deletedFiles} mục, giải phóng {freedMB} MB.",
-                    "Dọn file rác",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                long totalSize = 0;
+                int totalFiles = 0;
+                StringBuilder details = new StringBuilder();
+                var allFiles = new List<string>();
+                var allDirs = new List<string>();
+
+                foreach (string path in paths)
+                {
+                    var files = new List<string>();
+                    try
+                    {
+                        files = Directory.GetFiles(path, "*", SearchOption.AllDirectories).ToList();
+                    }
+                    catch { }
+
+                    int fileCount = files.Count;
+                    long size = 0;
+                    foreach (string file in files)
+                    {
+                        try { size += new FileInfo(file).Length; } catch { }
+                    }
+                    totalFiles += fileCount;
+                    totalSize += size;
+
+                    details.AppendLine($"• {path}");
+                    details.AppendLine($"  - Số file: {fileCount}, dung lượng: {Math.Round(size / (1024.0 * 1024.0), 2)} MB");
+
+                    allFiles.AddRange(files);
+
+                    try
+                    {
+                        var dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
+                        allDirs.AddRange(dirs);
+                    }
+                    catch { }
+                }
+
+                double sizeInMB = Math.Round(totalSize / (1024.0 * 1024.0), 2);
+                string message = $"Sẽ xóa tất cả file trong các thư mục sau:\n\n{details}\n" +
+                                 $"Tổng cộng: {totalFiles} file ({sizeInMB} MB)\n\n" +
+                                 $"Bạn có chắc chắn muốn xóa không?";
+
+                DialogResult result = MessageBox.Show(
+                    message,
+                    "Xác nhận xóa file rác",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2);
+
+                if (result == DialogResult.Yes)
+                {
+                    int deletedFiles = 0;
+                    long freedBytes = 0;
+
+                    foreach (string file in allFiles)
+                    {
+                        try
+                        {
+                            long size = new FileInfo(file).Length;
+                            File.Delete(file);
+                            deletedFiles++;
+                            freedBytes += size;
+                        }
+                        catch { }
+                    }
+
+                    foreach (string dir in allDirs.OrderByDescending(d => d.Length))
+                    {
+                        try { Directory.Delete(dir, true); } catch { }
+                    }
+
+                    double freedMB = Math.Round(freedBytes / (1024.0 * 1024.0), 2);
+                    MessageBox.Show(
+                        $"Đã xóa {deletedFiles} file, giải phóng {freedMB} MB.",
+                        "Dọn file rác",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                }
             }
             catch (Exception ex)
             {
@@ -1543,8 +1604,8 @@ namespace IT_Support_Toolkit
             string[] lines =
             {
             "Phần mềm: IT Support Toolkit",
-            "Phiên bản: 0.0.10.4",
-            "Ngày phát hành: 17/08/2025",
+            "Phiên bản: 0.0.10.5",
+            "Ngày phát hành: 18/08/2025",
             "Tác giả: Harry Hoang Le",
             "",
             "Phần mềm public mã nguồn tại: https://github.com/mrhoangit/it-support-toolkit",
@@ -3365,6 +3426,387 @@ namespace IT_Support_Toolkit
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi khi lấy thông tin mạng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Form chính - thêm vào button19_Click
+        private void button19_Click(object sender, EventArgs e)
+        {
+            RegistryBackupForm backupForm = new RegistryBackupForm();
+            backupForm.ShowDialog();
+        }
+
+        // Tạo form mới cho việc chọn registry backup
+        public partial class RegistryBackupForm : Form
+        {
+            private CheckBox chkSelectAll;
+            private CheckBox chkHKLM;
+            private CheckBox chkHKCU;
+            private CheckBox chkHKCR;
+            private CheckBox chkHKU;
+            private CheckBox chkHKCC;
+            private Button btnBackup;
+            private Button btnCancel;
+            private Label lblTitle;
+            private ProgressBar progressBar;
+            private Label lblNote;
+
+            public RegistryBackupForm()
+            {
+                InitializeComponent();
+                SetupForm();
+            }
+
+            private void InitializeComponent()
+            {
+                this.Size = new Size(500, 420);
+                this.Text = "Registry Backup";
+                this.StartPosition = FormStartPosition.CenterParent;
+                this.FormBorderStyle = FormBorderStyle.FixedDialog;
+                this.MaximizeBox = false;
+                this.MinimizeBox = false;
+
+                // Title
+                lblTitle = new Label();
+                lblTitle.Text = "Chọn các nhánh Registry cần backup:";
+                lblTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                lblTitle.Location = new Point(20, 20);
+                lblTitle.Size = new Size(450, 25);
+
+                // Select All checkbox
+                chkSelectAll = new CheckBox();
+                chkSelectAll.Text = "Chọn tất cả (Khuyến nghị - Backup toàn bộ Registry)";
+                chkSelectAll.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                chkSelectAll.ForeColor = Color.FromArgb(0, 120, 215);
+                chkSelectAll.Location = new Point(20, 55);
+                chkSelectAll.Size = new Size(400, 25);
+                chkSelectAll.CheckedChanged += ChkSelectAll_CheckedChanged;
+
+                // Registry hives checkboxes
+                chkHKLM = new CheckBox();
+                chkHKLM.Text = "HKEY_LOCAL_MACHINE (HKLM) - Cấu hình hệ thống";
+                chkHKLM.Location = new Point(40, 90);
+                chkHKLM.Size = new Size(420, 25);
+                //chkHKLM.Checked = true; // Mặc định chọn HKLM
+
+                chkHKCU = new CheckBox();
+                chkHKCU.Text = "HKEY_CURRENT_USER (HKCU) - Cấu hình user hiện tại";
+                chkHKCU.Location = new Point(40, 120);
+                chkHKCU.Size = new Size(420, 25);
+
+                chkHKCR = new CheckBox();
+                chkHKCR.Text = "HKEY_CLASSES_ROOT (HKCR) - Thông tin file association";
+                chkHKCR.Location = new Point(40, 150);
+                chkHKCR.Size = new Size(420, 25);
+
+                chkHKU = new CheckBox();
+                chkHKU.Text = "HKEY_USERS (HKU) - Tất cả user profiles";
+                chkHKU.Location = new Point(40, 180);
+                chkHKU.Size = new Size(420, 25);
+
+                chkHKCC = new CheckBox();
+                chkHKCC.Text = "HKEY_CURRENT_CONFIG (HKCC) - Cấu hình phần cứng";
+                chkHKCC.Location = new Point(40, 210);
+                chkHKCC.Size = new Size(420, 25);
+
+                // Note label
+                lblNote = new Label();
+                lblNote.Text = "💡 Lưu ý: Chọn \"Tất cả\" sẽ backup đầy đủ nhất, bao gồm cả Registry ảo hóa";
+                lblNote.ForeColor = Color.FromArgb(255, 140, 0);
+                lblNote.Location = new Point(20, 245);
+                lblNote.Size = new Size(450, 40);
+                lblNote.Font = new Font("Segoe UI", 8.5f);
+
+                // Progress bar
+                progressBar = new ProgressBar();
+                progressBar.Location = new Point(20, 290);
+                progressBar.Size = new Size(450, 25);
+                progressBar.Visible = false;
+
+                // Buttons
+                btnBackup = new Button();
+                btnBackup.Text = "Bắt đầu Backup";
+                btnBackup.Location = new Point(280, 330);
+                btnBackup.Size = new Size(120, 35);
+                btnBackup.BackColor = Color.FromArgb(0, 120, 215);
+                btnBackup.ForeColor = Color.White;
+                btnBackup.FlatStyle = FlatStyle.Flat;
+                btnBackup.Click += BtnBackup_Click;
+
+                btnCancel = new Button();
+                btnCancel.Text = "Hủy";
+                btnCancel.Location = new Point(180, 330);
+                btnCancel.Size = new Size(80, 35);
+                btnCancel.Click += BtnCancel_Click;
+
+                // Add controls to form
+                this.Controls.AddRange(new Control[] {
+            lblTitle, chkSelectAll, chkHKLM, chkHKCU,
+            chkHKCR, chkHKU, chkHKCC, lblNote, progressBar,
+            btnBackup, btnCancel
+        });
+
+                // Add event handlers for individual checkboxes
+                foreach (Control control in this.Controls)
+                {
+                    if (control is CheckBox && control != chkSelectAll)
+                    {
+                        ((CheckBox)control).CheckedChanged += IndividualCheckBox_CheckedChanged;
+                    }
+                }
+            }
+
+            private void SetupForm()
+            {
+                // Additional setup if needed
+            }
+
+            private void ChkSelectAll_CheckedChanged(object sender, EventArgs e)
+            {
+                bool isChecked = chkSelectAll.Checked;
+                chkHKLM.Checked = isChecked;
+                chkHKCU.Checked = isChecked;
+                chkHKCR.Checked = isChecked;
+                chkHKU.Checked = isChecked;
+                chkHKCC.Checked = isChecked;
+            }
+
+            private void IndividualCheckBox_CheckedChanged(object sender, EventArgs e)
+            {
+                // Update "Select All" checkbox based on individual selections
+                bool allChecked = chkHKLM.Checked && chkHKCU.Checked &&
+                                 chkHKCR.Checked && chkHKU.Checked && chkHKCC.Checked;
+
+                chkSelectAll.CheckedChanged -= ChkSelectAll_CheckedChanged;
+                chkSelectAll.Checked = allChecked;
+                chkSelectAll.CheckedChanged += ChkSelectAll_CheckedChanged;
+            }
+
+            private async void BtnBackup_Click(object sender, EventArgs e)
+            {
+                // Kiểm tra xem có nhánh nào được chọn không
+                if (!chkHKLM.Checked && !chkHKCU.Checked && !chkHKCR.Checked &&
+                    !chkHKU.Checked && !chkHKCC.Checked)
+                {
+                    MessageBox.Show("Vui lòng chọn ít nhất một nhánh Registry để backup!",
+                                   "Thông báo",
+                                   MessageBoxButtons.OK,
+                                   MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Chọn thư mục lưu backup
+                FolderBrowserDialog folderDialog = new FolderBrowserDialog();
+                folderDialog.Description = "Chọn thư mục lưu file backup Registry";
+                folderDialog.ShowNewFolderButton = true;
+
+                if (folderDialog.ShowDialog() == DialogResult.OK)
+                {
+                    await PerformBackup(folderDialog.SelectedPath);
+                }
+            }
+
+            private async Task PerformBackup(string backupFolder)
+            {
+                try
+                {
+                    btnBackup.Enabled = false;
+                    btnCancel.Enabled = false;
+                    progressBar.Visible = true;
+
+                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+                    // Kiểm tra xem có phải backup tất cả không
+                    bool backupAll = chkHKLM.Checked && chkHKCU.Checked &&
+                                   chkHKCR.Checked && chkHKU.Checked && chkHKCC.Checked;
+
+                    if (backupAll)
+                    {
+                        // Backup toàn bộ registry - GIỐNG HỆT REGISTRY EDITOR
+                        progressBar.Style = ProgressBarStyle.Marquee;
+
+                        try
+                        {
+                            string fileName = $"Complete_Registry_Backup_{timestamp}.reg";
+                            string fullPath = Path.Combine(backupFolder, fileName);
+
+                            await Task.Run(() => BackupCompleteRegistryLikeRegedit(fullPath));
+
+                            // Kiểm tra kết quả
+                            FileInfo fileInfo = new FileInfo(fullPath);
+                            long fileSizeKB = fileInfo.Length / 1024;
+
+                            MessageBox.Show($"✅ Backup toàn bộ Registry thành công!\n\n" +
+                                          $"📁 File: {fileName}\n" +
+                                          $"💾 Dung lượng: {fileSizeKB:N0} KB\n" +
+                                          $"📂 Thư mục: {backupFolder}\n\n" +
+                                          $"🔒 Đã bao gồm Registry ảo hóa và tất cả khóa được bảo vệ",
+                                          "Backup thành công",
+                                          MessageBoxButtons.OK,
+                                          MessageBoxIcon.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"❌ Lỗi backup toàn bộ Registry:\n{ex.Message}\n\n" +
+                                           $"💡 Đảm bảo chạy ứng dụng với quyền Administrator",
+                                           "Lỗi Backup",
+                                           MessageBoxButtons.OK,
+                                           MessageBoxIcon.Error);
+                        }
+                    }
+                    else
+                    {
+                        // Backup từng nhánh riêng biệt
+                        await BackupIndividualHives(backupFolder, timestamp);
+                    }
+
+                    this.Close();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi trong quá trình backup:\n{ex.Message}",
+                                   "Lỗi",
+                                   MessageBoxButtons.OK,
+                                   MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    btnBackup.Enabled = true;
+                    btnCancel.Enabled = true;
+                    progressBar.Visible = false;
+                }
+            }
+
+            private void BackupCompleteRegistryLikeRegedit(string backupPath)
+            {
+                // Sử dụng CHÍNH XÁC phương pháp của Registry Editor
+                ProcessStartInfo startInfo = new ProcessStartInfo();
+                startInfo.FileName = "regedit.exe";
+                startInfo.Arguments = $"/e \"{backupPath}\"";  // /e = export toàn bộ registry
+                startInfo.UseShellExecute = true;
+                startInfo.Verb = "runas";  // Yêu cầu quyền Administrator
+                startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                startInfo.CreateNoWindow = true;
+
+                using (Process process = Process.Start(startInfo))
+                {
+                    process.WaitForExit();
+
+                    if (process.ExitCode != 0)
+                    {
+                        throw new Exception($"Registry export failed. Exit code: {process.ExitCode}");
+                    }
+
+                    // Kiểm tra xem file có được tạo không
+                    if (!File.Exists(backupPath))
+                    {
+                        throw new Exception("Registry export completed but file was not created. Check permissions.");
+                    }
+
+                    // Kiểm tra xem file có dữ liệu không
+                    FileInfo fileInfo = new FileInfo(backupPath);
+                    if (fileInfo.Length < 1024) // File registry backup thường > 1KB
+                    {
+                        throw new Exception($"Registry export file is too small ({fileInfo.Length} bytes). Export may have failed.");
+                    }
+                }
+            }
+
+            private async Task BackupIndividualHives(string backupFolder, string timestamp)
+            {
+                List<string> backupTasks = new List<string>();
+
+                if (chkHKLM.Checked) backupTasks.Add("HKLM");
+                if (chkHKCU.Checked) backupTasks.Add("HKCU");
+                if (chkHKCR.Checked) backupTasks.Add("HKCR");
+                if (chkHKU.Checked) backupTasks.Add("HKU");
+                if (chkHKCC.Checked) backupTasks.Add("HKCC");
+
+                progressBar.Style = ProgressBarStyle.Marquee;
+                progressBar.Maximum = backupTasks.Count;
+                progressBar.Value = 0;
+
+                int successCount = 0;
+                List<string> errors = new List<string>();
+                List<string> successFiles = new List<string>();
+
+                foreach (string registryKey in backupTasks)
+                {
+                    try
+                    {
+                        string fileName = $"{registryKey}_Backup_{timestamp}.reg";
+                        string fullPath = Path.Combine(backupFolder, fileName);
+
+                        await Task.Run(() => BackupRegistryHive(registryKey, fullPath));
+                        successCount++;
+                        successFiles.Add(fileName);
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add($"❌ {registryKey}: {ex.Message}");
+                    }
+
+                    progressBar.Value++;
+                }
+
+                // Hiển thị kết quả cho backup từng phần
+                string message = $"📊 Backup hoàn tất!\n\n" +
+                               $"✅ Thành công: {successCount}/{backupTasks.Count} nhánh\n" +
+                               $"📂 Thư mục lưu: {backupFolder}\n\n";
+
+                if (successFiles.Count > 0)
+                {
+                    message += "📁 File đã tạo:\n";
+                    message += string.Join("\n", successFiles.Select(f => $"  • {f}")) + "\n\n";
+                }
+
+                if (errors.Count > 0)
+                {
+                    message += "⚠️ Lỗi:\n" + string.Join("\n", errors);
+                }
+
+                MessageBox.Show(message,
+                               successCount == backupTasks.Count ? "Backup thành công" : "Backup hoàn tất với lỗi",
+                               MessageBoxButtons.OK,
+                               successCount == backupTasks.Count ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            }
+
+            private void BackupRegistryHive(string registryKey, string backupPath)
+            {
+                ProcessStartInfo startInfo = new ProcessStartInfo();
+                startInfo.FileName = "reg.exe";
+                startInfo.Arguments = $"export {registryKey} \"{backupPath}\" /y";
+                startInfo.UseShellExecute = true;
+                startInfo.Verb = "runas";
+                startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                startInfo.CreateNoWindow = true;
+
+                using (Process process = Process.Start(startInfo))
+                {
+                    process.WaitForExit();
+
+                    if (process.ExitCode != 0)
+                    {
+                        throw new Exception($"Export failed with exit code: {process.ExitCode}");
+                    }
+
+                    // Kiểm tra file được tạo
+                    if (!File.Exists(backupPath))
+                    {
+                        throw new Exception("Export completed but file was not created");
+                    }
+
+                    FileInfo fileInfo = new FileInfo(backupPath);
+                    if (fileInfo.Length < 100)
+                    {
+                        throw new Exception($"Export file too small ({fileInfo.Length} bytes)");
+                    }
+                }
+            }
+
+            private void BtnCancel_Click(object sender, EventArgs e)
+            {
+                this.Close();
             }
         }
     }
